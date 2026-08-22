@@ -61,7 +61,7 @@ object DatabaseModule {
             context.applicationContext,
             ToDoDatabase::class.java,
             "Tasks.db"
-        ).build()
+        ).fallbackToDestructiveMigration().build()
     }
 
     @Provides

@@ -17,7 +17,6 @@
 package dev.boudy04.taskvault.data.source.local
 
 import androidx.room.Entity
-import androidx.room.Ignore
 import androidx.room.PrimaryKey
 import dev.boudy04.taskvault.data.TaskPriority
 import dev.boudy04.taskvault.data.TaskStatus
@@ -37,9 +36,9 @@ data class LocalTask(
     var title: String,
     var description: String,
     var isCompleted: Boolean,
-) {
-    // ponytail: not persisted (Room schema/migration out of scope here); persisted when the DAO
-    // layer learns about status/priority in a later task.
-    @Ignore var status: TaskStatus = TaskStatus.TODO
-    @Ignore var priority: TaskPriority = TaskPriority.MEDIUM
-}
+    var status: TaskStatus = TaskStatus.TODO,
+    var priority: TaskPriority = TaskPriority.MEDIUM,
+    var serverId: Int? = null,
+    var createdAt: String? = null,
+    var updatedAt: String? = null,
+)

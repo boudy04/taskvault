@@ -76,4 +76,19 @@ class FakeTaskDao(initialTasks: List<LocalTask>? = emptyList()) : TaskDao {
     override fun observeById(taskId: String): Flow<LocalTask> {
         TODO("Not implemented")
     }
+
+    override suspend fun getByServerId(serverId: Int): LocalTask? =
+        _tasks?.values?.firstOrNull { it.serverId == serverId }
+
+    override suspend fun getCompleted(): List<LocalTask> =
+        _tasks?.values?.filter { it.isCompleted } ?: emptyList()
+
+    override suspend fun deleteUnsyncedOrphans(): Int {
+        _tasks?.apply {
+            val originalSize = size
+            entries.removeIf { it.value.serverId == null }
+            return originalSize - size
+        }
+        return 0
+    }
 }

@@ -18,14 +18,22 @@ package dev.boudy04.taskvault.data.source.local
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 
 /**
  * The Room Database that contains the Task table.
  *
  * Note that exportSchema should be true in production databases.
  */
-@Database(entities = [LocalTask::class], version = 1, exportSchema = false)
+@Database(
+    entities = [LocalTask::class, PendingOpEntity::class],
+    version = 2,
+    exportSchema = false
+)
+@TypeConverters(Converters::class)
 abstract class ToDoDatabase : RoomDatabase() {
 
     abstract fun taskDao(): TaskDao
+
+    abstract fun pendingOpDao(): PendingOpDao
 }

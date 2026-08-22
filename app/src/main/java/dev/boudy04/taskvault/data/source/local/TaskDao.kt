@@ -107,4 +107,13 @@ interface TaskDao {
      */
     @Query("DELETE FROM task WHERE isCompleted = 1")
     suspend fun deleteCompleted(): Int
+
+    @Query("SELECT * FROM task WHERE serverId = :serverId LIMIT 1")
+    suspend fun getByServerId(serverId: Int): LocalTask?
+
+    @Query("SELECT * FROM task WHERE isCompleted = 1")
+    suspend fun getCompleted(): List<LocalTask>
+
+    @Query("DELETE FROM task WHERE serverId IS NULL AND id NOT IN (SELECT DISTINCT taskLocalId FROM pending_ops)")
+    suspend fun deleteUnsyncedOrphans(): Int
 }

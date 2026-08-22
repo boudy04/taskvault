@@ -17,7 +17,10 @@
 package dev.boudy04.taskvault
 
 import android.app.Application
+import androidx.hilt.work.HiltWorkerFactory
+import androidx.work.Configuration
 import dagger.hilt.android.HiltAndroidApp
+import javax.inject.Inject
 import timber.log.Timber
 import timber.log.Timber.DebugTree
 
@@ -26,7 +29,15 @@ import timber.log.Timber.DebugTree
  * Read Timber's documentation for production setups.
  */
 @HiltAndroidApp
-class TodoApplication : Application() {
+class TaskVaultApplication : Application(), Configuration.Provider {
+
+    @Inject
+    lateinit var workerFactory: HiltWorkerFactory
+
+    override val workManagerConfiguration: Configuration
+        get() = Configuration.Builder()
+            .setWorkerFactory(workerFactory)
+            .build()
 
     override fun onCreate() {
         super.onCreate()

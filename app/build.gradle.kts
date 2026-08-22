@@ -20,6 +20,7 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
     alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -128,6 +129,17 @@ dependencies {
     implementation(libs.androidx.hilt.navigation.compose)
     ksp(libs.hilt.compiler)
 
+    // Network
+    implementation(libs.retrofit.core)
+    implementation(libs.retrofit.kotlinx.serialization.converter)
+    implementation(libs.okhttp.logging.interceptor)
+
+    // WorkManager + DataStore
+    implementation(libs.androidx.work.ktx)
+    implementation(libs.hilt.ext.work)
+    ksp(libs.hilt.ext.compiler)
+    implementation(libs.androidx.dataStore.preferences)
+
     // Jetpack Compose
     val composeBom = platform(libs.androidx.compose.bom)
 
@@ -165,6 +177,10 @@ dependencies {
     // JVM tests - Hilt
     testImplementation(libs.hilt.android.testing)
     kspTest(libs.hilt.compiler)
+
+    // WorkManager testing + MockWebServer
+    testImplementation(libs.okhttp.mockwebserver)
+    testImplementation(libs.androidx.work.testing)
 
     // Dependencies for Android unit tests
     androidTestImplementation(composeBom)

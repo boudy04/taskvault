@@ -34,7 +34,7 @@ import dev.boudy04.taskvault.TodoTheme
 import dev.boudy04.taskvault.data.TaskRepository
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
-import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -128,7 +128,7 @@ class AppNavigationTest {
     }
 
     @Test
-    fun taskDetailScreen_doubleUIBackButton() = runTest {
+    fun taskDetailScreen_doubleUIBackButton() = runBlocking {
         val taskName = "UI <- button"
         taskRepository.createTask(taskName, "Description")
 
@@ -157,7 +157,7 @@ class AppNavigationTest {
     }
 
     @Test
-    fun taskDetailScreen_doubleBackButton() = runTest {
+    fun taskDetailScreen_doubleBackButton() = runBlocking {
         val taskName = "Back button"
         taskRepository.createTask(taskName, "Description")
 

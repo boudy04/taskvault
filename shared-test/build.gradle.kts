@@ -21,7 +21,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.android.architecture.blueprints.todoapp.shared.test"
+    namespace = "dev.boudy04.taskvault.shared.test"
     compileSdk = libs.versions.compileSdk.get().toInt()
     defaultConfig {
         minSdk = libs.versions.minSdk.get().toInt()

@@ -23,17 +23,17 @@ plugins {
 }
 
 android {
-    namespace = "com.example.android.architecture.blueprints.todoapp"
+    namespace = "dev.boudy04.taskvault"
     compileSdk = libs.versions.compileSdk.get().toInt()
 
     defaultConfig {
-        applicationId = "com.example.android.architecture.blueprints.main"
+        applicationId = "dev.boudy04.taskvault"
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
         versionCode = 1
         versionName = "1.0"
 
-        testInstrumentationRunner = "com.example.android.architecture.blueprints.todoapp.CustomTestRunner"
+        testInstrumentationRunner = "dev.boudy04.taskvault.CustomTestRunner"
 
         javaCompileOptions {
             annotationProcessorOptions {

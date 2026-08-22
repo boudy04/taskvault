@@ -20,15 +20,20 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Checkbox
@@ -47,6 +52,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -59,6 +67,7 @@ import dev.boudy04.taskvault.R
 import dev.boudy04.taskvault.TodoTheme
 import dev.boudy04.taskvault.data.Task
 import dev.boudy04.taskvault.data.TaskStatus
+import dev.boudy04.taskvault.data.TaskPriority
 import dev.boudy04.taskvault.tasks.TasksFilterType.ACTIVE_TASKS
 import dev.boudy04.taskvault.tasks.TasksFilterType.ALL_TASKS
 import dev.boudy04.taskvault.tasks.TasksFilterType.COMPLETED_TASKS
@@ -72,6 +81,7 @@ fun TasksScreen(
     onTaskClick: (Task) -> Unit,
     onUserMessageDisplayed: () -> Unit,
     openDrawer: () -> Unit,
+    onSettingsClick: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: TasksViewModel = hiltViewModel(),
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() }
@@ -86,7 +96,8 @@ fun TasksScreen(
                 onFilterActiveTasks = { viewModel.setFiltering(ACTIVE_TASKS) },
                 onFilterCompletedTasks = { viewModel.setFiltering(COMPLETED_TASKS) },
                 onClearCompletedTasks = { viewModel.clearCompletedTasks() },
-                onRefresh = { viewModel.refresh() }
+                onRefresh = { viewModel.refresh() },
+                onSettingsClick = onSettingsClick
             )
         },
         floatingActionButton = {
@@ -100,6 +111,7 @@ fun TasksScreen(
         TasksContent(
             loading = uiState.isLoading,
             tasks = uiState.items,
+            pendingSyncIds = uiState.pendingSyncIds,
             currentFilteringLabel = uiState.filteringUiInfo.currentFilteringLabel,
             noTasksLabel = uiState.filteringUiInfo.noTasksLabel,
             noTasksIconRes = uiState.filteringUiInfo.noTaskIconRes,
@@ -133,6 +145,7 @@ fun TasksScreen(
 private fun TasksContent(
     loading: Boolean,
     tasks: List<Task>,
+    pendingSyncIds: Set<String>,
     @StringRes currentFilteringLabel: Int,
     @StringRes noTasksLabel: Int,
     @DrawableRes noTasksIconRes: Int,
@@ -164,6 +177,7 @@ private fun TasksContent(
                 items(tasks) { task ->
                     TaskItem(
                         task = task,
+                        isUnsynced = task.id in pendingSyncIds,
                         onTaskClick = onTaskClick,
                         onCheckedChange = { onTaskCheckedChange(task, it) }
                     )
@@ -176,6 +190,7 @@ private fun TasksContent(
 @Composable
 private fun TaskItem(
     task: Task,
+    isUnsynced: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     onTaskClick: (Task) -> Unit
 ) {
@@ -193,17 +208,56 @@ private fun TaskItem(
             checked = task.isCompleted,
             onCheckedChange = onCheckedChange
         )
+        PriorityChip(priority = task.priority)
         Text(
             text = task.titleForList,
             style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.padding(
-                start = dimensionResource(id = R.dimen.horizontal_margin)
-            ),
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = dimensionResource(id = R.dimen.horizontal_margin)),
             textDecoration = if (task.isCompleted) {
                 TextDecoration.LineThrough
             } else {
                 null
             }
+        )
+        if (isUnsynced) {
+            val dotLabel = stringResource(R.string.cd_unsynced_dot)
+            Box(
+                modifier = Modifier
+                    .padding(start = 8.dp)
+                    .size(8.dp)
+                    .background(Color(0xFFFFB300), CircleShape)
+                    .semantics { contentDescription = dotLabel }
+            )
+        }
+    }
+}
+
+private val priorityContainerColors = mapOf(
+    TaskPriority.HIGH to Color(0xFFB3261E),
+    TaskPriority.MEDIUM to Color(0xFF7D5700),
+    TaskPriority.LOW to Color(0xFF38693C)
+)
+
+@Composable
+private fun PriorityChip(priority: TaskPriority) {
+    val label = stringResource(
+        when (priority) {
+            TaskPriority.HIGH -> R.string.priority_high
+            TaskPriority.MEDIUM -> R.string.priority_medium
+            TaskPriority.LOW -> R.string.priority_low
+        }
+    )
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = priorityContainerColors.getValue(priority),
+        contentColor = Color.White
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
         )
     }
 }
@@ -271,6 +325,7 @@ private fun TasksContentPreview() {
                 onRefresh = { },
                 onTaskClick = { },
                 onTaskCheckedChange = { _, _ -> },
+                pendingSyncIds = setOf("ID 1")
             )
         }
     }
@@ -290,6 +345,7 @@ private fun TasksContentEmptyPreview() {
                 onRefresh = { },
                 onTaskClick = { },
                 onTaskCheckedChange = { _, _ -> },
+                pendingSyncIds = emptySet()
             )
         }
     }
@@ -320,7 +376,8 @@ private fun TaskItemPreview() {
                     id = "ID"
                 ),
                 onTaskClick = { },
-                onCheckedChange = { }
+                onCheckedChange = { },
+                isUnsynced = false
             )
         }
     }
@@ -339,7 +396,8 @@ private fun TaskItemCompletedPreview() {
                     id = "ID"
                 ),
                 onTaskClick = { },
-                onCheckedChange = { }
+                onCheckedChange = { },
+                isUnsynced = true
             )
         }
     }

@@ -27,8 +27,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -55,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.boudy04.taskvault.R
+import dev.boudy04.taskvault.data.TaskPriority
 import dev.boudy04.taskvault.util.AddEditTaskTopAppBar
 
 @Composable
@@ -77,6 +82,7 @@ fun AddEditTaskScreen(
         }
     ) { paddingValues ->
         val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+        val priority by viewModel.priority.collectAsStateWithLifecycle()
 
         AddEditTaskContent(
             loading = uiState.isLoading,
@@ -84,6 +90,8 @@ fun AddEditTaskScreen(
             description = uiState.description,
             onTitleChanged = viewModel::updateTitle,
             onDescriptionChanged = viewModel::updateDescription,
+            priority = priority,
+            onPriorityChanged = viewModel::updatePriority,
             modifier = Modifier.padding(paddingValues)
         )
 
@@ -111,6 +119,8 @@ private fun AddEditTaskContent(
     title: String,
     description: String,
     onTitleChanged: (String) -> Unit,
+    priority: TaskPriority,
+    onPriorityChanged: (TaskPriority) -> Unit,
     onDescriptionChanged: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -159,6 +169,59 @@ private fun AddEditTaskContent(
                     .fillMaxWidth(),
                 colors = textFieldColors
             )
+            PriorityPicker(priority = priority, onPriorityChanged = onPriorityChanged)
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PriorityPicker(
+    priority: TaskPriority,
+    onPriorityChanged: (TaskPriority) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val options = remember {
+        listOf(
+            TaskPriority.LOW to R.string.priority_low,
+            TaskPriority.MEDIUM to R.string.priority_medium,
+            TaskPriority.HIGH to R.string.priority_high,
+        )
+    }
+    val selectedLabel = stringResource(
+        when (priority) {
+            TaskPriority.LOW -> R.string.priority_low
+            TaskPriority.MEDIUM -> R.string.priority_medium
+            TaskPriority.HIGH -> R.string.priority_high
+        }
+    )
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it }
+    ) {
+        OutlinedTextField(
+            value = selectedLabel,
+            onValueChange = { },
+            readOnly = true,
+            label = { Text(stringResource(id = R.string.priority_label)) },
+            trailingIcon = { Icon(Icons.Filled.ArrowDropDown, contentDescription = null) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            options.forEach { (value, labelRes) ->
+                DropdownMenuItem(
+                    text = { Text(stringResource(id = labelRes)) },
+                    onClick = {
+                        onPriorityChanged(value)
+                        expanded = false
+                    }
+                )
+            }
         }
     }
 }

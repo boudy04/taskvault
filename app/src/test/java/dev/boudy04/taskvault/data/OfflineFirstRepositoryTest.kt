@@ -122,6 +122,21 @@ class OfflineFirstRepositoryTest {
     }
 
     @Test
+    fun deleteTask_unsyncedRow_enqueuesNothing() = runTest {
+        val seeded = LocalTask(
+            id = "local-only",
+            title = "Local",
+            description = "never pushed",
+            isCompleted = false,
+            serverId = null,
+        )
+        val repo = repoWithFakes(seedTasks = listOf(seeded))
+        repo.deleteTask("local-only")
+        assertNull(fakeTaskDao.getById("local-only"))
+        assertEquals(0, fakePendingOps.getAll().size)
+    }
+
+    @Test
     fun clearCompletedTasks_deletesEachLocally() = runTest {
         val seedTasks = listOf(
             LocalTask("done-1", "One", "d", isCompleted = true, status = TaskStatus.DONE, serverId = 10),

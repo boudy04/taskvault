@@ -21,6 +21,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.boudy04.taskvault.R
 import dev.boudy04.taskvault.TodoDestinationsArgs
+import dev.boudy04.taskvault.data.TaskPriority
 import dev.boudy04.taskvault.data.TaskRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -58,6 +59,9 @@ class AddEditTaskViewModel @Inject constructor(
     // `updateTitle` or `updateDescription`
     private val _uiState = MutableStateFlow(AddEditTaskUiState())
     val uiState: StateFlow<AddEditTaskUiState> = _uiState.asStateFlow()
+
+    private val _priority = MutableStateFlow(TaskPriority.MEDIUM)
+    val priority: StateFlow<TaskPriority> = _priority.asStateFlow()
 
     init {
         if (taskId != null) {
@@ -99,8 +103,12 @@ class AddEditTaskViewModel @Inject constructor(
         }
     }
 
+    fun updatePriority(newPriority: TaskPriority) {
+        _priority.value = newPriority
+    }
+
     private fun createNewTask() = viewModelScope.launch {
-        taskRepository.createTask(uiState.value.title, uiState.value.description)
+        taskRepository.createTask(uiState.value.title, uiState.value.description, _priority.value)
         _uiState.update {
             it.copy(isTaskSaved = true)
         }
@@ -115,6 +123,7 @@ class AddEditTaskViewModel @Inject constructor(
                 taskId,
                 title = uiState.value.title,
                 description = uiState.value.description,
+                priority = _priority.value,
             )
             _uiState.update {
                 it.copy(isTaskSaved = true)
@@ -129,6 +138,7 @@ class AddEditTaskViewModel @Inject constructor(
         viewModelScope.launch {
             taskRepository.getTask(taskId).let { task ->
                 if (task != null) {
+                    _priority.value = task.priority
                     _uiState.update {
                         it.copy(
                             title = task.title,

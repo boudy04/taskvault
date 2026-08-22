@@ -106,7 +106,14 @@ class FakeTaskRepository : TaskRepository {
         saveTask(updatedTask)
     }
 
-    override fun getPendingSyncIdsStream(): Flow<Set<String>> = flowOf(emptySet())
+    private val _pendingSyncIds = MutableStateFlow<Set<String>>(emptySet())
+
+    @VisibleForTesting
+    fun setPendingSyncIds(ids: Set<String>) {
+        _pendingSyncIds.value = ids
+    }
+
+    override fun getPendingSyncIdsStream(): Flow<Set<String>> = _pendingSyncIds.asStateFlow()
 
     private fun saveTask(task: Task) {
         _savedTasks.update { tasks ->

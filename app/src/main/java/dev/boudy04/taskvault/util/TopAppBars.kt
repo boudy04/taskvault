@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -57,7 +58,8 @@ fun TasksTopAppBar(
     onFilterActiveTasks: () -> Unit,
     onFilterCompletedTasks: () -> Unit,
     onClearCompletedTasks: () -> Unit,
-    onRefresh: () -> Unit
+    onRefresh: () -> Unit,
+    onSettingsClick: () -> Unit
 ) {
     TopAppBar(
         title = { Text(text = stringResource(id = R.string.app_name)) },
@@ -69,6 +71,9 @@ fun TasksTopAppBar(
         actions = {
             FilterTasksMenu(onFilterAllTasks, onFilterActiveTasks, onFilterCompletedTasks)
             MoreTasksMenu(onClearCompletedTasks, onRefresh)
+            IconButton(onClick = onSettingsClick) {
+                Icon(Icons.Filled.Settings, stringResource(id = R.string.cd_settings))
+            }
         },
         modifier = Modifier.fillMaxWidth()
     )
@@ -193,7 +198,7 @@ fun AddEditTaskTopAppBar(@StringRes title: Int, onBack: () -> Unit) {
 private fun TasksTopAppBarPreview() {
     TodoTheme {
         Surface {
-            TasksTopAppBar({}, {}, {}, {}, {}, {})
+            TasksTopAppBar({}, {}, {}, {}, {}, {}, {})
         }
     }
 }

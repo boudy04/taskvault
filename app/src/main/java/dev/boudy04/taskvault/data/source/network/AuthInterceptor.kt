@@ -12,6 +12,7 @@ class AuthInterceptor @Inject constructor(
     override fun intercept(chain: Interceptor.Chain): Response {
         // ponytail: blocking first-read warms DataStore cache; subsequent reads are in-memory
         val token = runBlocking { settings.current().token }
+        if (token.isBlank()) return chain.proceed(chain.request())
         return chain.proceed(
             chain.request().newBuilder()
                 .header("Authorization", "Bearer $token")

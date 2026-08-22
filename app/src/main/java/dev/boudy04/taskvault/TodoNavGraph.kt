@@ -37,6 +37,7 @@ import dev.boudy04.taskvault.TodoDestinationsArgs.TITLE_ARG
 import dev.boudy04.taskvault.TodoDestinationsArgs.USER_MESSAGE_ARG
 import dev.boudy04.taskvault.addedittask.AddEditTaskScreen
 import dev.boudy04.taskvault.statistics.StatisticsScreen
+import dev.boudy04.taskvault.settings.SettingsScreen
 import dev.boudy04.taskvault.taskdetail.TaskDetailScreen
 import dev.boudy04.taskvault.tasks.TasksScreen
 import dev.boudy04.taskvault.util.AppModalDrawer
@@ -74,7 +75,8 @@ fun TodoNavGraph(
                     onUserMessageDisplayed = { entry.arguments?.putInt(USER_MESSAGE_ARG, 0) },
                     onAddTask = { navActions.navigateToAddEditTask(R.string.add_task, null) },
                     onTaskClick = { task -> navActions.navigateToTaskDetail(task.id) },
-                    openDrawer = { coroutineScope.launch { drawerState.open() } }
+                    openDrawer = { coroutineScope.launch { drawerState.open() } },
+                    onSettingsClick = navActions::navigateToSettings
                 )
             }
         }
@@ -82,6 +84,9 @@ fun TodoNavGraph(
             AppModalDrawer(drawerState, currentRoute, navActions) {
                 StatisticsScreen(openDrawer = { coroutineScope.launch { drawerState.open() } })
             }
+        }
+        composable(TodoDestinations.SETTINGS_ROUTE) {
+            SettingsScreen(onBack = { navController.popBackStack() })
         }
         composable(
             TodoDestinations.ADD_EDIT_TASK_ROUTE,

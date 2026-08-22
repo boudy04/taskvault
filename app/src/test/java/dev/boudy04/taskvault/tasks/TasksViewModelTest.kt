@@ -226,4 +226,13 @@ class TasksViewModelTest {
         assertThat(tasksViewModel.uiState.first().userMessage)
             .isEqualTo(R.string.task_marked_active)
     }
+
+    @Test
+    fun pendingIds_exposedThroughUiState() = runTest {
+        // Given a task with a queued pending op
+        tasksRepository.setPendingSyncIds(setOf("1"))
+
+        // Then the unsynced id set is exposed through the ui state
+        assertThat(tasksViewModel.uiState.first().pendingSyncIds).containsExactly("1")
+    }
 }

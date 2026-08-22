@@ -48,7 +48,8 @@ data class TasksUiState(
     val items: List<Task> = emptyList(),
     val isLoading: Boolean = false,
     val filteringUiInfo: FilteringUiInfo = FilteringUiInfo(),
-    val userMessage: Int? = null
+    val userMessage: Int? = null,
+    val pendingSyncIds: Set<String> = emptySet()
 )
 
 /**
@@ -74,8 +75,9 @@ class TasksViewModel @Inject constructor(
             .catch<Async<List<Task>>> { emit(Async.Error(R.string.loading_tasks_error)) }
 
     val uiState: StateFlow<TasksUiState> = combine(
-        _filterUiInfo, _isLoading, _userMessage, _filteredTasksAsync
-    ) { filterUiInfo, isLoading, userMessage, tasksAsync ->
+        _filterUiInfo, _isLoading, _userMessage, _filteredTasksAsync,
+        taskRepository.getPendingSyncIdsStream()
+    ) { filterUiInfo, isLoading, userMessage, tasksAsync, pendingSyncIds ->
         when (tasksAsync) {
             Async.Loading -> {
                 TasksUiState(isLoading = true)
@@ -86,6 +88,7 @@ class TasksViewModel @Inject constructor(
             is Async.Success -> {
                 TasksUiState(
                     items = tasksAsync.data,
+                    pendingSyncIds = pendingSyncIds,
                     filteringUiInfo = filterUiInfo,
                     isLoading = isLoading,
                     userMessage = userMessage

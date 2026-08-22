@@ -18,18 +18,26 @@ package dev.boudy04.taskvault.di
 
 import android.content.Context
 import androidx.room.Room
+import dev.boudy04.taskvault.BuildConfig
 import dev.boudy04.taskvault.data.DefaultTaskRepository
 import dev.boudy04.taskvault.data.TaskRepository
 import dev.boudy04.taskvault.data.source.local.TaskDao
 import dev.boudy04.taskvault.data.source.local.ToDoDatabase
-import dev.boudy04.taskvault.data.source.network.NetworkDataSource
-import dev.boudy04.taskvault.data.source.network.TaskNetworkDataSource
+import dev.boudy04.taskvault.data.source.network.AuthInterceptor
+import dev.boudy04.taskvault.data.source.network.BaseUrlInterceptor
+import dev.boudy04.taskvault.data.source.network.TaskApiService
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import kotlinx.serialization.json.Json
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
+import retrofit2.Retrofit
+import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import javax.inject.Singleton
 
 @Module
@@ -39,15 +47,6 @@ abstract class RepositoryModule {
     @Singleton
     @Binds
     abstract fun bindTaskRepository(repository: DefaultTaskRepository): TaskRepository
-}
-
-@Module
-@InstallIn(SingletonComponent::class)
-abstract class DataSourceModule {
-
-    @Singleton
-    @Binds
-    abstract fun bindNetworkDataSource(dataSource: TaskNetworkDataSource): NetworkDataSource
 }
 
 @Module
@@ -66,4 +65,38 @@ object DatabaseModule {
 
     @Provides
     fun provideTaskDao(database: ToDoDatabase): TaskDao = database.taskDao()
+}
+
+@Module
+@InstallIn(SingletonComponent::class)
+object NetworkModule {
+
+    @Provides
+    @Singleton
+    fun provideOkHttp(
+        auth: AuthInterceptor,
+        baseUrl: BaseUrlInterceptor,
+    ): OkHttpClient = OkHttpClient.Builder()
+        .addInterceptor(baseUrl)
+        .addInterceptor(auth)
+        .apply {
+            if (BuildConfig.DEBUG) {
+                addInterceptor(HttpLoggingInterceptor().setLevel(HttpLoggingInterceptor.Level.BASIC))
+            }
+        }
+        .build()
+
+    @Provides
+    @Singleton
+    fun provideRetrofit(client: OkHttpClient): Retrofit = Retrofit.Builder()
+        .baseUrl("http://localhost/") // rewritten per-request by BaseUrlInterceptor
+        .client(client)
+        .addConverterFactory(
+            Json { ignoreUnknownKeys = true }.asConverterFactory("application/json".toMediaType()),
+        )
+        .build()
+
+    @Provides
+    @Singleton
+    fun provideTaskApi(retrofit: Retrofit): TaskApiService = retrofit.create(TaskApiService::class.java)
 }

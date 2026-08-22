@@ -132,6 +132,7 @@ dependencies {
     // Network
     implementation(libs.retrofit.core)
     implementation(libs.retrofit.kotlinx.serialization.converter)
+    implementation(libs.kotlinx.serialization.json)
     implementation(libs.okhttp.logging.interceptor)
 
     // WorkManager + DataStore

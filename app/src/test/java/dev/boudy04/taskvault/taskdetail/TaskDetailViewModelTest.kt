@@ -22,6 +22,7 @@ import dev.boudy04.taskvault.R
 import dev.boudy04.taskvault.TodoDestinationsArgs
 import dev.boudy04.taskvault.data.FakeTaskRepository
 import dev.boudy04.taskvault.data.Task
+import dev.boudy04.taskvault.data.TaskStatus
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -91,7 +92,7 @@ class TaskDetailViewModelTest {
     @Test
     fun activateTask() = runTest {
         tasksRepository.deleteAllTasks()
-        tasksRepository.addTasks(task.copy(isCompleted = true))
+        tasksRepository.addTasks(task.copy(status = TaskStatus.DONE))
 
         // Verify that the task was completed initially
         assertThat(tasksRepository.savedTasks.value[task.id]?.isCompleted).isTrue()

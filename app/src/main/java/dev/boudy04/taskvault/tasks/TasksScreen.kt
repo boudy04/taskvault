@@ -58,6 +58,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.boudy04.taskvault.R
 import dev.boudy04.taskvault.TodoTheme
 import dev.boudy04.taskvault.data.Task
+import dev.boudy04.taskvault.data.TaskStatus
 import dev.boudy04.taskvault.tasks.TasksFilterType.ACTIVE_TASKS
 import dev.boudy04.taskvault.tasks.TasksFilterType.ALL_TASKS
 import dev.boudy04.taskvault.tasks.TasksFilterType.COMPLETED_TASKS
@@ -238,31 +239,29 @@ private fun TasksContentPreview() {
                     Task(
                         title = "Title 1",
                         description = "Description 1",
-                        isCompleted = false,
                         id = "ID 1"
                     ),
                     Task(
                         title = "Title 2",
                         description = "Description 2",
-                        isCompleted = true,
+                        status = TaskStatus.DONE,
                         id = "ID 2"
                     ),
                     Task(
                         title = "Title 3",
                         description = "Description 3",
-                        isCompleted = true,
+                        status = TaskStatus.DONE,
                         id = "ID 3"
                     ),
                     Task(
                         title = "Title 4",
                         description = "Description 4",
-                        isCompleted = false,
                         id = "ID 4"
                     ),
                     Task(
                         title = "Title 5",
                         description = "Description 5",
-                        isCompleted = true,
+                        status = TaskStatus.DONE,
                         id = "ID 5"
                     ),
                 ),
@@ -336,7 +335,7 @@ private fun TaskItemCompletedPreview() {
                 task = Task(
                     title = "Title",
                     description = "Description",
-                    isCompleted = true,
+                    status = TaskStatus.DONE,
                     id = "ID"
                 ),
                 onTaskClick = { },

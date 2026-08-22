@@ -46,6 +46,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.boudy04.taskvault.R
 import dev.boudy04.taskvault.data.Task
+import dev.boudy04.taskvault.data.TaskStatus
 import dev.boudy04.taskvault.util.LoadingContent
 import dev.boudy04.taskvault.util.TaskDetailTopAppBar
 
@@ -155,7 +156,6 @@ private fun EditTaskContentPreview() {
             Task(
                 title = "Title",
                 description = "Description",
-                isCompleted = false,
                 id = "ID"
             ),
             onTaskCheck = { },
@@ -175,7 +175,6 @@ private fun EditTaskContentTaskCompletedPreview() {
             Task(
                 title = "Title",
                 description = "Description",
-                isCompleted = false,
                 id = "ID"
             ),
             onTaskCheck = { },
@@ -194,7 +193,6 @@ private fun EditTaskContentEmptyPreview() {
             Task(
                 title = "Title",
                 description = "Description",
-                isCompleted = false,
                 id = "ID"
             ),
             onTaskCheck = { },

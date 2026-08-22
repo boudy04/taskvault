@@ -19,6 +19,7 @@ package dev.boudy04.taskvault.statistics
 import dev.boudy04.taskvault.MainCoroutineRule
 import dev.boudy04.taskvault.data.FakeTaskRepository
 import dev.boudy04.taskvault.data.Task
+import dev.boudy04.taskvault.data.TaskStatus
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -68,9 +69,9 @@ class StatisticsViewModelTest {
     fun loadNonEmptyTasksFromRepository_NonEmptyResults() = runTest {
         // We initialise the tasks to 3, with one active and two completed
         val task1 = Task(id = "1", title = "Title1", description = "Desc1")
-        val task2 = Task(id = "2", title = "Title2", description = "Desc2", isCompleted = true)
-        val task3 = Task(id = "3", title = "Title3", description = "Desc3", isCompleted = true)
-        val task4 = Task(id = "4", title = "Title4", description = "Desc4", isCompleted = true)
+        val task2 = Task(id = "2", title = "Title2", description = "Desc2", status = TaskStatus.DONE)
+        val task3 = Task(id = "3", title = "Title3", description = "Desc3", status = TaskStatus.DONE)
+        val task4 = Task(id = "4", title = "Title4", description = "Desc4", status = TaskStatus.DONE)
         tasksRepository.addTasks(task1, task2, task3, task4)
 
         // Then the results are not empty

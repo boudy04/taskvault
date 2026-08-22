@@ -17,6 +17,7 @@
 package dev.boudy04.taskvault.statistics
 
 import dev.boudy04.taskvault.data.Task
+import dev.boudy04.taskvault.data.TaskStatus
 import org.hamcrest.core.Is.`is`
 import org.junit.Assert.assertThat
 import org.junit.Test
@@ -33,7 +34,6 @@ class StatisticsUtilsTest {
                 id = "id",
                 title = "title",
                 description = "desc",
-                isCompleted = false,
             )
         )
         // When the list of tasks is computed with an active task
@@ -51,7 +51,7 @@ class StatisticsUtilsTest {
                 id = "id",
                 title = "title",
                 description = "desc",
-                isCompleted = true,
+                status = TaskStatus.DONE,
             )
         )
         // When the list of tasks is computed with a completed task
@@ -66,11 +66,11 @@ class StatisticsUtilsTest {
     fun getActiveAndCompletedStats_both() {
         // Given 3 completed tasks and 2 active tasks
         val tasks = listOf(
-            Task(id = "1", title = "title", description = "desc", isCompleted = true),
-            Task(id = "2", title = "title", description = "desc", isCompleted = true),
-            Task(id = "3", title = "title", description = "desc", isCompleted = true),
-            Task(id = "4", title = "title", description = "desc", isCompleted = false),
-            Task(id = "5", title = "title", description = "desc", isCompleted = false),
+            Task(id = "1", title = "title", description = "desc", status = TaskStatus.DONE),
+            Task(id = "2", title = "title", description = "desc", status = TaskStatus.DONE),
+            Task(id = "3", title = "title", description = "desc", status = TaskStatus.DONE),
+            Task(id = "4", title = "title", description = "desc"),
+            Task(id = "5", title = "title", description = "desc"),
         )
         // When the list of tasks is computed
         val result = getActiveAndCompletedStats(tasks)

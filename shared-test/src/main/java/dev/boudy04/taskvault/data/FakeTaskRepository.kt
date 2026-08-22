@@ -105,13 +105,13 @@ class FakeTaskRepository : TaskRepository {
 
     override suspend fun completeTask(taskId: String) {
         _savedTasks.value[taskId]?.let {
-            saveTask(it.copy(isCompleted = true))
+            saveTask(it.copy(status = TaskStatus.DONE))
         }
     }
 
     override suspend fun activateTask(taskId: String) {
         _savedTasks.value[taskId]?.let {
-            saveTask(it.copy(isCompleted = false))
+            saveTask(it.copy(status = TaskStatus.TODO))
         }
     }
 

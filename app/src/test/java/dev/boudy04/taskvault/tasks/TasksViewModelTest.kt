@@ -24,6 +24,7 @@ import dev.boudy04.taskvault.MainCoroutineRule
 import dev.boudy04.taskvault.R
 import dev.boudy04.taskvault.data.FakeTaskRepository
 import dev.boudy04.taskvault.data.Task
+import dev.boudy04.taskvault.data.TaskStatus
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -58,8 +59,8 @@ class TasksViewModelTest {
         // We initialise the tasks to 3, with one active and two completed
         tasksRepository = FakeTaskRepository()
         val task1 = Task(id = "1", title = "Title1", description = "Desc1")
-        val task2 = Task(id = "2", title = "Title2", description = "Desc2", isCompleted = true)
-        val task3 = Task(id = "3", title = "Title3", description = "Desc3", isCompleted = true)
+        val task2 = Task(id = "2", title = "Title2", description = "Desc2", status = TaskStatus.DONE)
+        val task3 = Task(id = "3", title = "Title3", description = "Desc3", status = TaskStatus.DONE)
         tasksRepository.addTasks(task1, task2, task3)
 
         tasksViewModel = TasksViewModel(tasksRepository, SavedStateHandle())
@@ -212,7 +213,7 @@ class TasksViewModelTest {
     @Test
     fun activateTask_dataAndSnackbarUpdated() = runTest {
         // With a repository that has a completed task
-        val task = Task(id = "id", title = "Title", description = "Description", isCompleted = true)
+        val task = Task(id = "id", title = "Title", description = "Description", status = TaskStatus.DONE)
         tasksRepository.addTasks(task)
 
         // Activate task

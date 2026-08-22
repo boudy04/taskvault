@@ -18,7 +18,7 @@ package dev.boudy04.taskvault.data
 
 import dev.boudy04.taskvault.data.source.local.LocalTask
 import dev.boudy04.taskvault.data.source.network.NetworkTask
-import dev.boudy04.taskvault.data.source.network.TaskStatus
+import dev.boudy04.taskvault.data.source.network.TaskStatus as NetworkTaskStatus
 
 /**
  * Data model mapping extension functions. There are three model types:
@@ -40,7 +40,10 @@ fun Task.toLocal() = LocalTask(
     title = title,
     description = description,
     isCompleted = isCompleted,
-)
+).also {
+    it.status = status
+    it.priority = priority
+}
 
 fun List<Task>.toLocal() = map(Task::toLocal)
 
@@ -49,7 +52,8 @@ fun LocalTask.toExternal() = Task(
     id = id,
     title = title,
     description = description,
-    isCompleted = isCompleted,
+    status = if (isCompleted) TaskStatus.DONE else TaskStatus.TODO,
+    priority = priority,
 )
 
 // Note: JvmName is used to provide a unique name for each extension function with the same name.
@@ -63,7 +67,7 @@ fun NetworkTask.toLocal() = LocalTask(
     id = id,
     title = title,
     description = shortDescription,
-    isCompleted = (status == TaskStatus.COMPLETE),
+    isCompleted = (status == NetworkTaskStatus.COMPLETE),
 )
 
 @JvmName("networkToLocal")
@@ -74,7 +78,7 @@ fun LocalTask.toNetwork() = NetworkTask(
     id = id,
     title = title,
     shortDescription = description,
-    status = if (isCompleted) { TaskStatus.COMPLETE } else { TaskStatus.ACTIVE }
+    status = if (isCompleted) { NetworkTaskStatus.COMPLETE } else { NetworkTaskStatus.ACTIVE }
 )
 
 fun List<LocalTask>.toNetwork() = map(LocalTask::toNetwork)

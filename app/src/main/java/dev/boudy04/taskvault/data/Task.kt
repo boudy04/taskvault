@@ -21,7 +21,8 @@ package dev.boudy04.taskvault.data
  *
  * @param title title of the task
  * @param description description of the task
- * @param isCompleted whether or not this task is completed
+ * @param status status of the task
+ * @param priority priority of the task
  * @param id id of the task
  *
  * TODO: The constructor of this class should be `internal` but it is used in previews and tests
@@ -30,16 +31,19 @@ package dev.boudy04.taskvault.data
 data class Task(
     val title: String = "",
     val description: String = "",
-    val isCompleted: Boolean = false,
+    val status: TaskStatus = TaskStatus.TODO,
+    val priority: TaskPriority = TaskPriority.MEDIUM,
     val id: String,
 ) {
-
     val titleForList: String
         get() = if (title.isNotEmpty()) title else description
 
-    val isActive
-        get() = !isCompleted
+    val isActive: Boolean
+        get() = status != TaskStatus.DONE
 
-    val isEmpty
+    val isCompleted: Boolean
+        get() = status == TaskStatus.DONE
+
+    val isEmpty: Boolean
         get() = title.isEmpty() || description.isEmpty()
 }

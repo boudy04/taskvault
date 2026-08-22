@@ -17,6 +17,7 @@
 package dev.boudy04.taskvault.data
 
 import dev.boudy04.taskvault.data.source.local.FakeTaskDao
+import dev.boudy04.taskvault.data.TaskStatus
 import dev.boudy04.taskvault.data.source.network.FakeNetworkDataSource
 import com.google.common.truth.Truth.assertThat
 import junit.framework.TestCase.assertEquals
@@ -242,7 +243,7 @@ class DefaultTaskRepositoryTest {
 
     @Test
     fun clearCompletedTasks() = testScope.runTest {
-        val completedTask = task1.copy(isCompleted = true)
+        val completedTask = task1.copy(status = TaskStatus.DONE)
         localDataSource.tasks = listOf(completedTask.toLocal(), task2.toLocal())
         taskRepository.clearCompletedTasks()
 

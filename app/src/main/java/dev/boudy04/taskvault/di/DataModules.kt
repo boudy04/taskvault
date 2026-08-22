@@ -21,6 +21,7 @@ import androidx.room.Room
 import dev.boudy04.taskvault.BuildConfig
 import dev.boudy04.taskvault.data.DefaultTaskRepository
 import dev.boudy04.taskvault.data.TaskRepository
+import dev.boudy04.taskvault.data.source.local.PendingOpDao
 import dev.boudy04.taskvault.data.source.local.TaskDao
 import dev.boudy04.taskvault.data.source.local.ToDoDatabase
 import dev.boudy04.taskvault.data.source.network.AuthInterceptor
@@ -65,6 +66,9 @@ object DatabaseModule {
 
     @Provides
     fun provideTaskDao(database: ToDoDatabase): TaskDao = database.taskDao()
+
+    @Provides
+    fun providePendingOpDao(database: ToDoDatabase): PendingOpDao = database.pendingOpDao()
 }
 
 @Module
@@ -88,11 +92,15 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideRetrofit(client: OkHttpClient): Retrofit = Retrofit.Builder()
+    fun provideJson(): Json = Json { ignoreUnknownKeys = true }
+
+    @Provides
+    @Singleton
+    fun provideRetrofit(client: OkHttpClient, json: Json): Retrofit = Retrofit.Builder()
         .baseUrl("http://localhost/") // rewritten per-request by BaseUrlInterceptor
         .client(client)
         .addConverterFactory(
-            Json { ignoreUnknownKeys = true }.asConverterFactory("application/json".toMediaType()),
+            json.asConverterFactory("application/json".toMediaType()),
         )
         .build()
 

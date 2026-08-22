@@ -1,0 +1,118 @@
+package dev.boudy04.taskvault.sync
+
+import dev.boudy04.taskvault.data.copyFromDto
+import dev.boudy04.taskvault.data.source.local.PendingOpDao
+import dev.boudy04.taskvault.data.source.local.PendingOpState
+import dev.boudy04.taskvault.data.source.local.PendingOpType
+import dev.boudy04.taskvault.data.source.local.TaskDao
+import dev.boudy04.taskvault.data.source.network.TaskApiService
+import dev.boudy04.taskvault.data.source.network.toLocal
+import dev.boudy04.taskvault.data.toDtoWithoutServerId
+import dev.boudy04.taskvault.di.IoDispatcher
+import java.io.IOException
+import javax.inject.Inject
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import retrofit2.HttpException
+
+/**
+ * Drains the offline pending-op queue against the remote API, then pulls the server list to
+ * reconcile local rows. Terminal outcomes map 1:1 onto WorkManager results via [SyncWorker].
+ */
+class SyncEngine @Inject constructor(
+    private val api: TaskApiService,
+    private val tasks: TaskDao,
+    private val ops: PendingOpDao,
+    private val json: Json,
+    @IoDispatcher private val io: CoroutineDispatcher,
+) {
+    suspend fun run(): SyncOutcome = withContext(io) {
+        val drain = drain()
+        if (drain != null) return@withContext drain
+        pull()
+        SyncOutcome.SUCCESS
+    }
+
+    /** Returns terminal outcome to bubble, or null when drain completed cleanly. */
+    private suspend fun drain(): SyncOutcome? {
+        while (true) {
+            val op = ops.nextPending() ?: return null
+            ops.updateState(op.opId, PendingOpState.RUNNING)
+            val payload = json.decodeFromString<TaskPayload>(op.payload)
+            try {
+                when (op.opType) {
+                    PendingOpType.CREATE -> {
+                        val created = api.createTask(payload.toDtoWithoutServerId())
+                        tasks.getById(payload.localId)?.let { row ->
+                            tasks.upsert(
+                                row.copy(
+                                    serverId = created.id,
+                                    createdAt = created.createdAt,
+                                    updatedAt = created.updatedAt,
+                                ),
+                            )
+                        }
+                    }
+                    PendingOpType.UPDATE -> {
+                        val target = payload.serverId ?: error("UPDATE without serverId")
+                        val updated = api.updateTask(target, payload.toDtoWithoutServerId())
+                        tasks.getById(payload.localId)?.let { row ->
+                            tasks.upsert(row.copy(updatedAt = updated.updatedAt))
+                        }
+                    }
+                    PendingOpType.DELETE -> {
+                        val target = payload.serverId
+                        if (target != null) api.deleteTask(target)
+                    }
+                }
+                ops.deleteByIds(listOf(op.opId))
+            } catch (e: IOException) {
+                ops.updateState(op.opId, PendingOpState.PENDING)
+                return SyncOutcome.RETRY
+            } catch (e: HttpException) {
+                when (e.code()) {
+                    401 -> {
+                        ops.updateState(op.opId, PendingOpState.PENDING)
+                        return SyncOutcome.FAILURE
+                    }
+                    404 -> {
+                        payload.serverId?.let { sid ->
+                            tasks.getByServerId(sid)?.let { row -> tasks.deleteById(row.id) }
+                        }
+                        ops.deleteByIds(listOf(op.opId))
+                    }
+                    in 500..599 -> {
+                        ops.updateState(op.opId, PendingOpState.PENDING)
+                        return SyncOutcome.RETRY
+                    }
+                    else ->
+                        // unrecoverable 4xx: drop op, keep row
+                        ops.deleteByIds(listOf(op.opId))
+                }
+            }
+        }
+    }
+
+    private suspend fun pull() {
+        val remote = try {
+            api.listTasks(null)
+        } catch (e: Exception) {
+            return
+        }
+        val protected = ops.getAll().filter { it.state == PendingOpState.PENDING }.map { it.taskLocalId }.toSet()
+        val remoteIds = remote.map { it.id }.toSet()
+        remote.forEach { dto ->
+            val existing = tasks.getByServerId(dto.id)
+            if (existing == null) {
+                tasks.upsert(dto.toLocal())
+            } else {
+                tasks.upsert(existing.copyFromDto(dto))
+            }
+        }
+        tasks.getAll().forEach { row ->
+            val sid = row.serverId
+            if (sid != null && sid !in remoteIds && row.id !in protected) tasks.deleteById(row.id)
+        }
+    }
+}

@@ -17,6 +17,10 @@
 package dev.boudy04.taskvault.data
 
 import dev.boudy04.taskvault.data.source.local.LocalTask
+import dev.boudy04.taskvault.data.source.network.TaskDto
+import dev.boudy04.taskvault.data.source.network.toTaskPriority
+import dev.boudy04.taskvault.data.source.network.toTaskStatus
+import dev.boudy04.taskvault.sync.TaskPayload
 
 /**
  * Data model mapping extension functions. There are two model types:
@@ -57,3 +61,22 @@ fun LocalTask.toExternal() = Task(
 // signature on the JVM.
 @JvmName("localToExternal")
 fun List<LocalTask>.toExternal() = map(LocalTask::toExternal)
+
+// Pending-op payload / server DTO mappings used by the sync engine
+fun TaskPayload.toDtoWithoutServerId() = TaskDto(
+    id = serverId ?: 0,
+    title = title,
+    description = description,
+    status = status,
+    priority = priority,
+)
+
+fun LocalTask.copyFromDto(dto: TaskDto) = copy(
+    title = dto.title,
+    description = dto.description,
+    isCompleted = dto.status == "done",
+    status = dto.status.toTaskStatus(),
+    priority = dto.priority.toTaskPriority(),
+    createdAt = dto.createdAt,
+    updatedAt = dto.updatedAt,
+)

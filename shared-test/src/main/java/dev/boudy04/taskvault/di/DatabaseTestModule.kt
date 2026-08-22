@@ -18,6 +18,8 @@ package dev.boudy04.taskvault.di
 
 import android.content.Context
 import androidx.room.Room
+import dev.boudy04.taskvault.data.source.local.PendingOpDao
+import dev.boudy04.taskvault.data.source.local.TaskDao
 import dev.boudy04.taskvault.data.source.local.ToDoDatabase
 import dagger.Module
 import dagger.Provides
@@ -41,4 +43,10 @@ object DatabaseTestModule {
             .allowMainThreadQueries()
             .build()
     }
+
+    @Provides
+    fun provideTaskDao(database: ToDoDatabase): TaskDao = database.taskDao()
+
+    @Provides
+    fun providePendingOpDao(database: ToDoDatabase): PendingOpDao = database.pendingOpDao()
 }

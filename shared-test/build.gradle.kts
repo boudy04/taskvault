@@ -35,6 +35,10 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+
+    androidComponents {
+        beforeVariants { it.enableAndroidTest = false }
+    }
 }
 
 dependencies {

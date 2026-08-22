@@ -35,9 +35,18 @@ interface TaskRepository {
 
     suspend fun refreshTask(taskId: String)
 
-    suspend fun createTask(title: String, description: String): String
+    suspend fun createTask(
+        title: String,
+        description: String,
+        priority: TaskPriority = TaskPriority.MEDIUM,
+    ): String
 
-    suspend fun updateTask(taskId: String, title: String, description: String)
+    suspend fun updateTask(
+        taskId: String,
+        title: String,
+        description: String,
+        priority: TaskPriority = TaskPriority.MEDIUM,
+    )
 
     suspend fun completeTask(taskId: String)
 
@@ -48,4 +57,7 @@ interface TaskRepository {
     suspend fun deleteAllTasks()
 
     suspend fun deleteTask(taskId: String)
+
+    /** Local ids of tasks with queued pending ops; drives offline badges in the UI. */
+    fun getPendingSyncIdsStream(): Flow<Set<String>>
 }

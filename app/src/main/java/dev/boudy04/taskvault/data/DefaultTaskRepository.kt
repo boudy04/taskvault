@@ -16,118 +16,142 @@
 
 package dev.boudy04.taskvault.data
 
+import dev.boudy04.taskvault.data.source.local.LocalTask
+import dev.boudy04.taskvault.data.source.local.PendingOpDao
+import dev.boudy04.taskvault.data.source.local.PendingOpEntity
+import dev.boudy04.taskvault.data.source.local.PendingOpType
 import dev.boudy04.taskvault.data.source.local.TaskDao
-import dev.boudy04.taskvault.di.ApplicationScope
+import dev.boudy04.taskvault.data.source.network.toApi
 import dev.boudy04.taskvault.di.DefaultDispatcher
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.withContext
+import dev.boudy04.taskvault.sync.SyncScheduler
+import dev.boudy04.taskvault.sync.TaskPayload
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
 
 /**
- * Default implementation of [TaskRepository]. Single entry point for managing tasks' data.
- *
- * @param localDataSource - The local data source
- * @param dispatcher - The dispatcher to be used for long running or complex operations, such as ID
- * generation or mapping many models.
- * @param scope - The coroutine scope used for deferred jobs where the result isn't important.
+ * Offline-first [TaskRepository]: every mutation writes to Room first, enqueues a pending op
+ * carrying a serializable [TaskPayload], then asks the [SyncScheduler] for a unique sync run.
  */
 @Singleton
 class DefaultTaskRepository @Inject constructor(
     private val localDataSource: TaskDao,
+    private val pendingOps: PendingOpDao,
+    private val syncScheduler: SyncScheduler,
+    private val json: Json,
     @DefaultDispatcher private val dispatcher: CoroutineDispatcher,
-    @ApplicationScope private val scope: CoroutineScope,
 ) : TaskRepository {
 
-    override suspend fun createTask(title: String, description: String): String {
+    override suspend fun createTask(
+        title: String,
+        description: String,
+        priority: TaskPriority,
+    ): String {
         // ID creation might be a complex operation so it's executed using the supplied
         // coroutine dispatcher
         val taskId = withContext(dispatcher) {
             UUID.randomUUID().toString()
         }
-        val task = Task(
+        val task = LocalTask(
+            id = taskId,
             title = title,
             description = description,
-            id = taskId,
+            isCompleted = false,
+            status = TaskStatus.TODO,
+            priority = priority,
         )
-        localDataSource.upsert(task.toLocal())
+        localDataSource.upsert(task)
+        enqueue(PendingOpType.CREATE, task)
         return taskId
     }
 
-    override suspend fun updateTask(taskId: String, title: String, description: String) {
-        val task = getTask(taskId)?.copy(
-            title = title,
-            description = description
-        ) ?: throw Exception("Task (id $taskId) not found")
+    override suspend fun updateTask(
+        taskId: String,
+        title: String,
+        description: String,
+        priority: TaskPriority,
+    ) {
+        val task = localDataSource.getById(taskId) ?: throw Exception("Task ($taskId) not found")
+        val updated = task.copy(title = title, description = description, priority = priority)
+        localDataSource.upsert(updated)
+        enqueue(PendingOpType.UPDATE, updated)
+    }
 
-        localDataSource.upsert(task.toLocal())
+    override suspend fun completeTask(taskId: String) = setStatus(taskId, TaskStatus.DONE)
+
+    override suspend fun activateTask(taskId: String) = setStatus(taskId, TaskStatus.TODO)
+
+    /** Single DAO write preserving both the status column and the legacy isCompleted flag. */
+    private suspend fun setStatus(taskId: String, status: TaskStatus) {
+        val task = localDataSource.getById(taskId) ?: return
+        val updated = task.copy(status = status, isCompleted = status == TaskStatus.DONE)
+        localDataSource.upsert(updated)
+        enqueue(PendingOpType.UPDATE, updated)
+    }
+
+    override suspend fun deleteTask(taskId: String) {
+        val task = localDataSource.getById(taskId) ?: return
+        pendingOps.clearForTask(taskId) // drop stale ops for this row before queueing the tombstone
+        localDataSource.deleteById(taskId) // UI reflects deletion instantly
+        if (task.serverId != null) enqueue(PendingOpType.DELETE, task)
+    }
+
+    override suspend fun clearCompletedTasks() {
+        localDataSource.getCompleted().forEach { deleteTask(it.id) }
+    }
+
+    override suspend fun deleteAllTasks() {
+        localDataSource.getAll().forEach { deleteTask(it.id) }
     }
 
     override suspend fun getTasks(forceUpdate: Boolean): List<Task> {
-        if (forceUpdate) {
-            refresh()
-        }
+        if (forceUpdate) syncScheduler.requestSync()
         return withContext(dispatcher) {
             localDataSource.getAll().toExternal()
         }
     }
 
-    override fun getTasksStream(): Flow<List<Task>> {
-        return localDataSource.observeAll().map { tasks ->
-            withContext(dispatcher) {
-                tasks.toExternal()
-            }
+    override fun getTasksStream(): Flow<List<Task>> =
+        localDataSource.observeAll().map { rows ->
+            withContext(dispatcher) { rows.toExternal() }
         }
+
+    override suspend fun refresh() {
+        syncScheduler.requestSync()
+    }
+
+    override fun getTaskStream(taskId: String): Flow<Task?> =
+        localDataSource.observeById(taskId).map { it?.toExternal() }
+
+    override suspend fun getTask(taskId: String, forceUpdate: Boolean): Task? {
+        if (forceUpdate) syncScheduler.requestSync()
+        return localDataSource.getById(taskId)?.toExternal()
     }
 
     override suspend fun refreshTask(taskId: String) {
         refresh()
     }
 
-    override fun getTaskStream(taskId: String): Flow<Task?> {
-        return localDataSource.observeById(taskId).map { it.toExternal() }
-    }
+    override fun getPendingSyncIdsStream(): Flow<Set<String>> =
+        pendingOps.observePendingTaskIds().map { it.toSet() }
 
-    /**
-     * Get a Task with the given ID. Will return null if the task cannot be found.
-     *
-     * @param taskId - The ID of the task
-     * @param forceUpdate - true if the task should be updated from the network data source first.
-     */
-    override suspend fun getTask(taskId: String, forceUpdate: Boolean): Task? {
-        if (forceUpdate) {
-            refresh()
-        }
-        return localDataSource.getById(taskId)?.toExternal()
+    private suspend fun enqueue(type: PendingOpType, task: LocalTask) {
+        val payload = TaskPayload(
+            localId = task.id,
+            title = task.title,
+            description = task.description,
+            status = task.status.toApi(),
+            priority = task.priority.toApi(),
+            serverId = task.serverId,
+        )
+        pendingOps.insert(
+            PendingOpEntity(taskLocalId = task.id, opType = type, payload = json.encodeToString(payload)),
+        )
+        syncScheduler.requestSync()
     }
-
-    override suspend fun completeTask(taskId: String) {
-        localDataSource.updateCompleted(taskId = taskId, completed = true)
-    }
-
-    override suspend fun activateTask(taskId: String) {
-        localDataSource.updateCompleted(taskId = taskId, completed = false)
-    }
-
-    override suspend fun clearCompletedTasks() {
-        localDataSource.deleteCompleted()
-    }
-
-    override suspend fun deleteAllTasks() {
-        localDataSource.deleteAll()
-    }
-
-    override suspend fun deleteTask(taskId: String) {
-        localDataSource.deleteById(taskId)
-    }
-
-    /**
-     * ponytail: network refresh removed with the fake data source; Task 8 wires the real
-     * sync against TaskApiService. Until then force-update is a no-op over local data.
-     */
-    override suspend fun refresh() = Unit
 }

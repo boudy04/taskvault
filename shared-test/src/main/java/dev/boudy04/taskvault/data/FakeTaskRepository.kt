@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 
@@ -56,9 +57,13 @@ class FakeTaskRepository : TaskRepository {
         refresh()
     }
 
-    override suspend fun createTask(title: String, description: String): String {
+    override suspend fun createTask(
+        title: String,
+        description: String,
+        priority: TaskPriority,
+    ): String {
         val taskId = generateTaskId()
-        Task(title = title, description = description, id = taskId).also {
+        Task(title = title, description = description, priority = priority, id = taskId).also {
             saveTask(it)
         }
         return taskId
@@ -86,14 +91,22 @@ class FakeTaskRepository : TaskRepository {
         return observableTasks.first()
     }
 
-    override suspend fun updateTask(taskId: String, title: String, description: String) {
+    override suspend fun updateTask(
+        taskId: String,
+        title: String,
+        description: String,
+        priority: TaskPriority,
+    ) {
         val updatedTask = _savedTasks.value[taskId]?.copy(
             title = title,
-            description = description
+            description = description,
+            priority = priority,
         ) ?: throw Exception("Task (id $taskId) not found")
 
         saveTask(updatedTask)
     }
+
+    override fun getPendingSyncIdsStream(): Flow<Set<String>> = flowOf(emptySet())
 
     private fun saveTask(task: Task) {
         _savedTasks.update { tasks ->

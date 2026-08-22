@@ -18,6 +18,7 @@ package dev.boudy04.taskvault.di
 
 import android.content.Context
 import androidx.room.Room
+import androidx.work.WorkManager
 import dev.boudy04.taskvault.BuildConfig
 import dev.boudy04.taskvault.data.DefaultTaskRepository
 import dev.boudy04.taskvault.data.TaskRepository
@@ -27,6 +28,8 @@ import dev.boudy04.taskvault.data.source.local.ToDoDatabase
 import dev.boudy04.taskvault.data.source.network.AuthInterceptor
 import dev.boudy04.taskvault.data.source.network.BaseUrlInterceptor
 import dev.boudy04.taskvault.data.source.network.TaskApiService
+import dev.boudy04.taskvault.sync.SyncScheduler
+import dev.boudy04.taskvault.sync.WorkManagerSyncScheduler
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -48,6 +51,10 @@ abstract class RepositoryModule {
     @Singleton
     @Binds
     abstract fun bindTaskRepository(repository: DefaultTaskRepository): TaskRepository
+
+    @Singleton
+    @Binds
+    abstract fun bindSyncScheduler(impl: WorkManagerSyncScheduler): SyncScheduler
 }
 
 @Module
@@ -107,4 +114,14 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideTaskApi(retrofit: Retrofit): TaskApiService = retrofit.create(TaskApiService::class.java)
+}
+
+@Module
+@InstallIn(SingletonComponent::class)
+object WorkManagerModule {
+
+    @Provides
+    @Singleton
+    fun provideWorkManager(@ApplicationContext context: Context): WorkManager =
+        WorkManager.getInstance(context)
 }

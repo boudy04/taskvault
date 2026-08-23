@@ -31,6 +31,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import dev.boudy04.taskvault.ui.theme.PrimaryPillButton
+import dev.boudy04.taskvault.ui.theme.APP_FONT_FAMILY
+import dev.boudy04.taskvault.ui.theme.SYSTEM_FONT_FAMILY
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -78,9 +81,11 @@ fun SettingsScreen(
             baseUrl = uiState.baseUrl,
             token = uiState.token,
             appLock = uiState.appLock,
+            fontFamily = uiState.fontFamily,
             onBaseUrlChanged = viewModel::updateBaseUrl,
             onTokenChanged = viewModel::updateToken,
             onAppLockChanged = viewModel::setAppLock,
+            onFontFamilyChanged = viewModel::setFontFamily,
             onSave = viewModel::saveConfig,
             modifier = Modifier.padding(paddingValues)
         )
@@ -99,9 +104,11 @@ private fun SettingsContent(
     baseUrl: String,
     token: String,
     appLock: Boolean,
+    fontFamily: String,
     onBaseUrlChanged: (String) -> Unit,
     onTokenChanged: (String) -> Unit,
     onAppLockChanged: (Boolean) -> Unit,
+    onFontFamilyChanged: (String) -> Unit,
     onSave: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -174,6 +181,25 @@ private fun SettingsContent(
                 }
             )
         }
+        Text(
+            text = stringResource(id = R.string.font_section_title),
+            style = MaterialTheme.typography.titleMedium
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            FilterChip(
+                selected = fontFamily == APP_FONT_FAMILY,
+                onClick = { onFontFamilyChanged(APP_FONT_FAMILY) },
+                label = { Text(stringResource(id = R.string.font_family_taskvault)) }
+            )
+            FilterChip(
+                selected = fontFamily == SYSTEM_FONT_FAMILY,
+                onClick = { onFontFamilyChanged(SYSTEM_FONT_FAMILY) },
+                label = { Text(stringResource(id = R.string.font_family_system)) }
+            )
+        }
         PrimaryPillButton(
             onClick = onSaveWithPermission,
             modifier = Modifier.padding(top = 8.dp)
@@ -209,9 +235,11 @@ private fun SettingsContentPreview() {
             baseUrl = "https://example.com",
             token = "token",
             appLock = false,
+            fontFamily = APP_FONT_FAMILY,
             onBaseUrlChanged = { },
             onTokenChanged = { },
             onAppLockChanged = { },
+            onFontFamilyChanged = { },
             onSave = { }
         )
     }

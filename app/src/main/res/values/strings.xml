@@ -90,6 +90,11 @@
     <string name="auth_token_hint">Auth token</string>
     <string name="settings_save">Save</string>
 
+    <!-- Font -->
+    <string name="font_section_title">Font</string>
+    <string name="font_family_taskvault">TaskVault (serif)</string>
+    <string name="font_family_system">System</string>
+
     <!-- Connectivity notification -->
     <string name="notification_channel_sync_status">Sync status</string>
     <string name="notification_connectivity_title">TaskVault can\'t reach the server</string>

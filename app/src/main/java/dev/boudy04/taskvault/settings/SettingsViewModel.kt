@@ -33,6 +33,7 @@ data class SettingsUiState(
     val baseUrl: String = "",
     val token: String = "",
     val appLock: Boolean = false,
+    val fontFamily: String = "app",
     val resultText: String? = null,
 )
 
@@ -55,6 +56,9 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             settings.appLock.collect { lock -> _uiState.update { it.copy(appLock = lock) } }
         }
+        viewModelScope.launch {
+            settings.fontFamily.collect { family -> _uiState.update { it.copy(fontFamily = family) } }
+        }
     }
 
     fun updateBaseUrl(value: String) {
@@ -74,6 +78,10 @@ class SettingsViewModel @Inject constructor(
 
     fun setAppLock(enabled: Boolean) {
         viewModelScope.launch { settings.setAppLock(enabled) }
+    }
+
+    fun setFontFamily(family: String) {
+        viewModelScope.launch { settings.setFontFamily(family) }
     }
 
     fun resultMessageShown() {

@@ -73,35 +73,46 @@ private val Outfit = FontFamily(
     ),
 )
 
-private fun outfitTypography(): Typography {
+// Portfolio display face for headings; single static instance, no variation axis.
+private val InstrumentSerif = FontFamily(Font(R.font.instrument_serif_regular))
+
+// fontChoice: "app" = Instrument Serif headings + Outfit body, "system" = platform default everywhere.
+private fun outfitTypography(fontFamilyChoice: String): Typography {
     val t = Typography()
+    val system = fontFamilyChoice == SYSTEM_FONT_FAMILY
+    val headingFont = if (system) FontFamily.Default else InstrumentSerif
+    val bodyFont = if (system) FontFamily.Default else Outfit
     return Typography(
-        displayLarge = t.displayLarge.copy(fontFamily = Outfit, fontWeight = FontWeight.Bold),
-        displayMedium = t.displayMedium.copy(fontFamily = Outfit, fontWeight = FontWeight.Bold),
-        displaySmall = t.displaySmall.copy(fontFamily = Outfit, fontWeight = FontWeight.Bold),
-        headlineLarge = t.headlineLarge.copy(fontFamily = Outfit, fontWeight = FontWeight.Bold),
-        headlineMedium = t.headlineMedium.copy(fontFamily = Outfit, fontWeight = FontWeight.Bold),
-        headlineSmall = t.headlineSmall.copy(fontFamily = Outfit, fontWeight = FontWeight.Bold),
-        titleLarge = t.titleLarge.copy(fontFamily = Outfit, fontWeight = FontWeight.Bold),
-        titleMedium = t.titleMedium.copy(fontFamily = Outfit, fontWeight = FontWeight.Bold),
-        titleSmall = t.titleSmall.copy(fontFamily = Outfit, fontWeight = FontWeight.SemiBold),
-        bodyLarge = t.bodyLarge.copy(fontFamily = Outfit, fontWeight = FontWeight.Medium),
-        bodyMedium = t.bodyMedium.copy(fontFamily = Outfit, fontWeight = FontWeight.Medium),
-        bodySmall = t.bodySmall.copy(fontFamily = Outfit, fontWeight = FontWeight.Medium),
-        labelLarge = t.labelLarge.copy(fontFamily = Outfit, fontWeight = FontWeight.SemiBold),
-        labelMedium = t.labelMedium.copy(fontFamily = Outfit, fontWeight = FontWeight.Medium),
-        labelSmall = t.labelSmall.copy(fontFamily = Outfit, fontWeight = FontWeight.Medium),
+        displayLarge = t.displayLarge.copy(fontFamily = headingFont, fontWeight = FontWeight.Bold),
+        displayMedium = t.displayMedium.copy(fontFamily = headingFont, fontWeight = FontWeight.Bold),
+        displaySmall = t.displaySmall.copy(fontFamily = headingFont, fontWeight = FontWeight.Bold),
+        headlineLarge = t.headlineLarge.copy(fontFamily = headingFont, fontWeight = FontWeight.Bold),
+        headlineMedium = t.headlineMedium.copy(fontFamily = headingFont, fontWeight = FontWeight.Bold),
+        headlineSmall = t.headlineSmall.copy(fontFamily = headingFont, fontWeight = FontWeight.Bold),
+        titleLarge = t.titleLarge.copy(fontFamily = headingFont, fontWeight = FontWeight.Bold),
+        titleMedium = t.titleMedium.copy(fontFamily = headingFont, fontWeight = FontWeight.Bold),
+        titleSmall = t.titleSmall.copy(fontFamily = headingFont, fontWeight = FontWeight.SemiBold),
+        bodyLarge = t.bodyLarge.copy(fontFamily = bodyFont, fontWeight = FontWeight.Medium),
+        bodyMedium = t.bodyMedium.copy(fontFamily = bodyFont, fontWeight = FontWeight.Medium),
+        bodySmall = t.bodySmall.copy(fontFamily = bodyFont, fontWeight = FontWeight.Medium),
+        labelLarge = t.labelLarge.copy(fontFamily = bodyFont, fontWeight = FontWeight.SemiBold),
+        labelMedium = t.labelMedium.copy(fontFamily = bodyFont, fontWeight = FontWeight.Medium),
+        labelSmall = t.labelSmall.copy(fontFamily = bodyFont, fontWeight = FontWeight.Medium),
     )
 }
+
+const val SYSTEM_FONT_FAMILY = "system"
+const val APP_FONT_FAMILY = "app"
 
 @Composable
 fun TaskVaultTheme(
     themeMode: ThemeMode,
+    fontChoice: String = APP_FONT_FAMILY,
     content: @Composable () -> Unit
 ) {
     MaterialTheme(
         colorScheme = if (themeMode.resolvesDark(isSystemInDarkTheme())) DarkColors else LightColors,
-        typography = outfitTypography(),
+        typography = outfitTypography(fontChoice),
         content = content,
     )
 }

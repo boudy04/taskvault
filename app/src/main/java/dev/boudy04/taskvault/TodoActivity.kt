@@ -57,6 +57,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.boudy04.taskvault.settings.SettingsRepository
 import dev.boudy04.taskvault.settings.ThemeMode
+import dev.boudy04.taskvault.ui.theme.APP_FONT_FAMILY
 import dev.boudy04.taskvault.ui.theme.BackgroundDark
 import dev.boudy04.taskvault.ui.theme.OnBackgroundDark
 import dev.boudy04.taskvault.ui.theme.PrimaryPillButton
@@ -86,9 +87,13 @@ class TodoActivity : FragmentActivity() {
         enableEdgeToEdge()
         setContent {
             var themeMode by remember { mutableStateOf(ThemeMode.SYSTEM) }
+            var fontChoice by remember { mutableStateOf(APP_FONT_FAMILY) }
             // ponytail: activity-scoped state instead of a VM; single consumer, no test churn
             LaunchedEffect(Unit) {
                 settingsRepository.themeMode.collect { themeMode = it }
+            }
+            LaunchedEffect(Unit) {
+                settingsRepository.fontFamily.collect { fontChoice = it }
             }
             val darkTheme = themeMode.resolvesDark(isSystemInDarkTheme())
             DisposableEffect(darkTheme) {
@@ -102,7 +107,7 @@ class TodoActivity : FragmentActivity() {
                 onDispose { }
             }
             val scope = rememberCoroutineScope()
-            TaskVaultTheme(themeMode = themeMode) {
+            TaskVaultTheme(themeMode = themeMode, fontChoice = fontChoice) {
                 val todoViewModel: TodoViewModel = hiltViewModel()
                 // Lock decision lives in the ViewModel: it survives configuration changes
                 // (rotation, uiMode) but dies with the process, so an authenticated unlock

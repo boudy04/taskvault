@@ -197,7 +197,11 @@ private fun TasksContent(
                 style = MaterialTheme.typography.headlineSmall
             )
             LazyColumn {
-                items(tasks) { task ->
+                items(
+                    items = tasks,
+                    key = { it.id },
+                    contentType = { "task" }
+                ) { task ->
                     TaskItem(
                         task = task,
                         isUnsynced = task.id in pendingSyncIds,
@@ -253,9 +257,13 @@ private fun TaskItem(
             }
         )
         task.dueAt?.let { iso ->
-            val overdue = runCatching {
-                java.time.Instant.parse(iso).isBefore(java.time.Instant.now()) && task.isActive
-            }.getOrDefault(false)
+            // ponytail: cached per (dueAt, active); overdue staleness within a minute is acceptable
+            val (overdue, dueText) = remember(iso, task.isActive) {
+                val isOverdue = runCatching {
+                    java.time.Instant.parse(iso).isBefore(java.time.Instant.now()) && task.isActive
+                }.getOrDefault(false)
+                isOverdue to DueDates.format(iso).orEmpty()
+            }
             val dueColor = if (overdue) Color(0xFFB3261E) else MaterialTheme.colorScheme.onSurfaceVariant
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
@@ -265,7 +273,7 @@ private fun TaskItem(
                     modifier = Modifier.size(16.dp)
                 )
                 Text(
-                    text = DueDates.format(iso).orEmpty(),
+                    text = dueText,
                     style = MaterialTheme.typography.labelSmall,
                     color = dueColor,
                     modifier = Modifier.padding(start = 4.dp)

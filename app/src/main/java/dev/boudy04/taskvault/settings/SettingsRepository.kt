@@ -16,10 +16,12 @@ enum class ThemeMode { SYSTEM, LIGHT, DARK }
 interface SettingsRepository {
     val config: Flow<ServerConfig>
     val themeMode: Flow<ThemeMode>
+    val fontFamily: Flow<String>
     val appLock: Flow<Boolean>
     suspend fun current(): ServerConfig
     suspend fun setConfig(config: ServerConfig)
     suspend fun setThemeMode(mode: ThemeMode)
+    suspend fun setFontFamily(family: String)
     suspend fun setAppLock(enabled: Boolean)
 }
 
@@ -35,6 +37,7 @@ class DataStoreSettingsRepository @Inject constructor(
         val url = stringPreferencesKey("server_url")
         val token = stringPreferencesKey("auth_token")
         val themeMode = stringPreferencesKey("theme_mode")
+        val fontFamily = stringPreferencesKey("font_family")
         val appLock = booleanPreferencesKey("app_lock")
     }
 
@@ -59,6 +62,16 @@ class DataStoreSettingsRepository @Inject constructor(
     override suspend fun setThemeMode(mode: ThemeMode) {
         dataStore.edit { p ->
             p[Keys.themeMode] = mode.name
+        }
+    }
+
+    override val fontFamily: Flow<String> = dataStore.data.map { p ->
+        p[Keys.fontFamily]?.takeIf { it == "app" || it == "system" } ?: "app"
+    }
+
+    override suspend fun setFontFamily(family: String) {
+        dataStore.edit { p ->
+            p[Keys.fontFamily] = family
         }
     }
 

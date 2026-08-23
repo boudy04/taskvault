@@ -151,15 +151,33 @@ class SyncEngineTest {
     }
 
     @Test
-    fun ioError_returnsRetry_keepsOpPending() = runTest(dispatcher) {
+    fun ioError_returnsConnectivityRetry_keepsOpPending() = runTest(dispatcher) {
         tasks.upsert(localTask("l5"))
         enqueue(PendingOpType.CREATE, payload("l5"))
         api.createError = IOException("offline")
 
         val outcome = engine.run()
 
-        assertThat(outcome).isEqualTo(SyncOutcome.RETRY)
+        assertThat(outcome).isEqualTo(SyncOutcome.CONNECTIVITY_RETRY)
         assertThat(ops.getAll().single().state).isEqualTo(PendingOpState.PENDING)
+    }
+
+    @Test
+    fun orphanRunningOp_fromKilledWorker_isReclaimedAndDrained() = runTest(dispatcher) {
+        tasks.upsert(localTask("l7"))
+        enqueue(PendingOpType.CREATE, payload("l7"))
+        // Simulate a worker death mid-drain: the op was marked RUNNING when the process died.
+        ops.updateState(ops.getAll().single().opId, PendingOpState.RUNNING)
+        api.createResult = TaskDto(id = 11, createdAt = "c11", updatedAt = "u11")
+        api.listResult = listOf(
+            TaskDto(id = 11, title = "T", status = "todo", priority = "high", createdAt = "c11", updatedAt = "u11"),
+        )
+
+        val outcome = engine.run()
+
+        assertThat(outcome).isEqualTo(SyncOutcome.SUCCESS)
+        assertThat(tasks.getById("l7")?.serverId).isEqualTo(11)
+        assertThat(ops.getAll()).isEmpty()
     }
 
     @Test

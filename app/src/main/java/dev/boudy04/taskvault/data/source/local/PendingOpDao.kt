@@ -17,6 +17,11 @@ interface PendingOpDao {
     )
     suspend fun nextPending(): PendingOpEntity?
 
+    /** Reclaims ops left RUNNING by a killed worker; drains are single-flight so any
+     *  RUNNING op at engine start is an orphan. */
+    @Query("UPDATE pending_ops SET state = 'PENDING' WHERE state = 'RUNNING'")
+    suspend fun resetRunningToPending()
+
     @Query("UPDATE pending_ops SET state = :state, attempts = attempts + 1 WHERE opId = :opId")
     suspend fun updateState(opId: Long, state: PendingOpState)
 

@@ -28,6 +28,7 @@ class SyncEngine @Inject constructor(
     @IoDispatcher private val io: CoroutineDispatcher,
 ) {
     suspend fun run(): SyncOutcome = withContext(io) {
+        ops.resetRunningToPending()
         val drain = drain()
         if (drain != null) return@withContext drain
         pull()
@@ -69,7 +70,7 @@ class SyncEngine @Inject constructor(
                 ops.deleteByIds(listOf(op.opId))
             } catch (e: IOException) {
                 ops.updateState(op.opId, PendingOpState.PENDING)
-                return SyncOutcome.RETRY
+                return SyncOutcome.CONNECTIVITY_RETRY
             } catch (e: HttpException) {
                 when (e.code()) {
                     401 -> {

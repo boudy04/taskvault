@@ -20,15 +20,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import okhttp3.Request
 
 /**
  * UiState for the settings screen.
@@ -80,31 +76,11 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { settings.setAppLock(enabled) }
     }
 
-    // ponytail: one-shot OkHttpClient per test press; swap for injected client if this grows
-    fun testConnection() {
-        viewModelScope.launch {
-            val url = _uiState.value.baseUrl.trim().trimEnd('/') + "/health"
-            try {
-                val response = withContext(Dispatchers.IO) {
-                    OkHttpClient()
-                        .newCall(Request.Builder().url(url).build())
-                        .execute()
-                }
-                response.use { resp ->
-                    _uiState.update { it.copy(resultText = "HTTP ${resp.code}") }
-                }
-            } catch (e: Exception) {
-                _uiState.update { it.copy(resultText = e.message ?: ERROR_MESSAGE) }
-            }
-        }
-    }
-
     fun resultMessageShown() {
         _uiState.update { it.copy(resultText = null) }
     }
 
     private companion object {
         const val SAVED_MESSAGE = "Saved"
-        const val ERROR_MESSAGE = "Connection failed"
     }
 }

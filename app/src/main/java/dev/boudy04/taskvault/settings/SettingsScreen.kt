@@ -16,6 +16,11 @@
 
 package dev.boudy04.taskvault.settings
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -26,7 +31,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import dev.boudy04.taskvault.ui.theme.PrimaryPillButton
-import dev.boudy04.taskvault.ui.theme.QuietPillButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -77,7 +81,6 @@ fun SettingsScreen(
             onTokenChanged = viewModel::updateToken,
             onAppLockChanged = viewModel::setAppLock,
             onSave = viewModel::saveConfig,
-            onTestConnection = viewModel::testConnection,
             modifier = Modifier.padding(paddingValues)
         )
 
@@ -99,10 +102,24 @@ private fun SettingsContent(
     onTokenChanged: (String) -> Unit,
     onAppLockChanged: (Boolean) -> Unit,
     onSave: () -> Unit,
-    onTestConnection: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { /* denied is fine: connectivity notification silently no-ops, dot badge remains */ }
+
+    // Ask once per Save press on API 33+; saving itself is never blocked by it.
+    val onSaveWithPermission = {
+        if (
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        onSave()
+    }
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -155,16 +172,11 @@ private fun SettingsContent(
                 }
             )
         }
-        Row(
-            modifier = Modifier.padding(top = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(dimensionResource(id = R.dimen.list_item_padding))
+        PrimaryPillButton(
+            onClick = onSaveWithPermission,
+            modifier = Modifier.padding(top = 8.dp)
         ) {
-            PrimaryPillButton(onClick = onSave) {
-                Text(stringResource(id = R.string.settings_save))
-            }
-            QuietPillButton(onClick = onTestConnection) {
-                Text(stringResource(id = R.string.settings_test_connection))
-            }
+            Text(stringResource(id = R.string.settings_save))
         }
     }
 }
@@ -198,8 +210,7 @@ private fun SettingsContentPreview() {
             onBaseUrlChanged = { },
             onTokenChanged = { },
             onAppLockChanged = { },
-            onSave = { },
-            onTestConnection = { }
+            onSave = { }
         )
     }
 }

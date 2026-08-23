@@ -80,7 +80,11 @@
     <string name="server_url_hint">Server URL</string>
     <string name="auth_token_hint">Auth token</string>
     <string name="settings_save">Save</string>
-    <string name="settings_test_connection">Test connection</string>
+
+    <!-- Connectivity notification -->
+    <string name="notification_channel_sync_status">Sync status</string>
+    <string name="notification_connectivity_title">TaskVault can\'t reach the server</string>
+    <string name="notification_connectivity_text">Check your internet connection or server URL in Settings.</string>
 
     <!-- App lock -->
     <string name="app_lock">App lock</string>

@@ -39,6 +39,14 @@ class FakePendingOpDao(initialOps: List<PendingOpEntity> = emptyList()) : Pendin
         ops.filter { it.state == PendingOpState.PENDING }
             .minWithOrNull(compareBy({ it.enqueuedAt }, { it.opId }))
 
+    override suspend fun resetRunningToPending() {
+        for (i in ops.indices) {
+            if (ops[i].state == PendingOpState.RUNNING) {
+                ops[i] = ops[i].copy(state = PendingOpState.PENDING)
+            }
+        }
+    }
+
     override suspend fun updateState(opId: Long, state: PendingOpState) {
         val index = ops.indexOfFirst { it.opId == opId }
         if (index >= 0) {

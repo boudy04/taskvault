@@ -18,15 +18,25 @@ interface SettingsRepository {
     val themeMode: Flow<ThemeMode>
     val fontFamily: Flow<String>
     val appLock: Flow<Boolean>
+
+    /** Account username of the active JWT session; "" when logged out. */
+    val username: Flow<String>
+
+    /** True while a (non-blank) JWT token is stored. */
+    val loggedIn: Flow<Boolean>
+
     suspend fun current(): ServerConfig
     suspend fun setConfig(config: ServerConfig)
     suspend fun setThemeMode(mode: ThemeMode)
     suspend fun setFontFamily(family: String)
     suspend fun setAppLock(enabled: Boolean)
+    suspend fun setSession(token: String, username: String)
+    suspend fun clearSession()
 }
 
 private const val DEFAULT_URL = "https://prject-cv-production.up.railway.app"
-private const val DEFAULT_TOKEN = "dev-token"
+// Blank by default: a fresh install has no JWT, so the login screen shows first.
+private const val DEFAULT_TOKEN = ""
 
 @Singleton
 class DataStoreSettingsRepository @Inject constructor(
@@ -36,6 +46,7 @@ class DataStoreSettingsRepository @Inject constructor(
     private object Keys {
         val url = stringPreferencesKey("server_url")
         val token = stringPreferencesKey("auth_token")
+        val username = stringPreferencesKey("username")
         val themeMode = stringPreferencesKey("theme_mode")
         val fontFamily = stringPreferencesKey("font_family")
         val appLock = booleanPreferencesKey("app_lock")
@@ -80,6 +91,24 @@ class DataStoreSettingsRepository @Inject constructor(
     override suspend fun setAppLock(enabled: Boolean) {
         dataStore.edit { p ->
             p[Keys.appLock] = enabled
+        }
+    }
+
+    override val username: Flow<String> = dataStore.data.map { p -> p[Keys.username] ?: "" }
+
+    override val loggedIn: Flow<Boolean> = dataStore.data.map { p -> !p[Keys.token].isNullOrBlank() }
+
+    override suspend fun setSession(token: String, username: String) {
+        dataStore.edit { p ->
+            p[Keys.token] = token
+            p[Keys.username] = username
+        }
+    }
+
+    override suspend fun clearSession() {
+        dataStore.edit { p ->
+            p[Keys.token] = ""
+            p[Keys.username] = ""
         }
     }
 }

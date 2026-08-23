@@ -122,7 +122,14 @@ fun TaskVaultTheme(
 fun PrimaryPillButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     content: @Composable RowScope.() -> Unit
 ) {
-    Button(onClick = onClick, modifier = modifier, shape = CircleShape, content = content)
+    Button(
+        onClick = onClick,
+        modifier = modifier,
+        enabled = enabled,
+        shape = CircleShape,
+        content = content,
+    )
 }

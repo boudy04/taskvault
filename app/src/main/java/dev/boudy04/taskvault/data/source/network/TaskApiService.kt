@@ -10,6 +10,12 @@ import retrofit2.http.POST
 import retrofit2.http.Query
 
 interface TaskApiService {
+
+    @POST("api/auth/register")
+    suspend fun register(@Body body: AuthRequest): AuthResponse
+
+    @POST("api/auth/login")
+    suspend fun login(@Body body: AuthRequest): AuthResponse
     @GET("api/tasks")
     suspend fun listTasks(@Query("status") status: String? = null): List<TaskDto>
 

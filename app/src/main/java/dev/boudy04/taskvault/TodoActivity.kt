@@ -55,6 +55,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dev.boudy04.taskvault.auth.LoginScreen
 import dev.boudy04.taskvault.settings.SettingsRepository
 import dev.boudy04.taskvault.settings.ThemeMode
 import dev.boudy04.taskvault.ui.theme.APP_FONT_FAMILY
@@ -108,13 +109,13 @@ class TodoActivity : FragmentActivity() {
             }
             val scope = rememberCoroutineScope()
             TaskVaultTheme(themeMode = themeMode, fontChoice = fontChoice) {
-                val todoViewModel: TodoViewModel = hiltViewModel()
-                // Lock decision lives in the ViewModel: it survives configuration changes
-                // (rotation, uiMode) but dies with the process, so an authenticated unlock
-                // holds for the rest of the process lifetime exactly as specified.
-                val locked by todoViewModel.lockState.collectAsStateWithLifecycle()
-                when (locked) {
-                    false -> TodoNavGraph(
+                // Session gate first: no JWT -> full-screen login, so app-lock unlock only
+                // ever happens after a successful login. null = DataStore not read yet.
+                val loggedIn by settingsRepository.loggedIn
+                    .collectAsStateWithLifecycle(initialValue = null)
+                when (loggedIn) {
+                    false -> LoginScreen()
+                    true -> MainContent(
                         themeMode = themeMode,
                         onCycleTheme = {
                             scope.launch {
@@ -126,13 +127,29 @@ class TodoActivity : FragmentActivity() {
                                     }
                                 )
                             }
-                        }
+                        },
                     )
-                    true -> LockGate(onUnlocked = todoViewModel::unlock)
                     null -> Unit
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun MainContent(themeMode: ThemeMode, onCycleTheme: () -> Unit) {
+    val todoViewModel: TodoViewModel = hiltViewModel()
+    // Lock decision lives in the ViewModel: it survives configuration changes
+    // (rotation, uiMode) but dies with the process, so an authenticated unlock
+    // holds for the rest of the process lifetime exactly as specified.
+    val locked by todoViewModel.lockState.collectAsStateWithLifecycle()
+    when (locked) {
+        false -> TodoNavGraph(
+            themeMode = themeMode,
+            onCycleTheme = onCycleTheme,
+        )
+        true -> LockGate(onUnlocked = todoViewModel::unlock)
+        null -> Unit
     }
 }
 

@@ -86,8 +86,21 @@
     <string name="cd_theme_toggle">Toggle theme</string>
     <string name="settings_title">Server Settings</string>
     <string name="server_url_hint">Server URL</string>
-    <string name="auth_token_hint">Auth token</string>
     <string name="settings_save">Save</string>
+
+    <!-- Auth / login -->
+    <string name="username_hint">Username</string>
+    <string name="password_hint">Password</string>
+    <string name="login_button">Log in</string>
+    <string name="register_button">Register</string>
+    <string name="switch_to_register">New here? Create an account</string>
+    <string name="switch_to_login">Have an account? Log in</string>
+    <string name="login_error_bad_credentials">Wrong username or password</string>
+    <string name="login_error_username_taken">Username taken</string>
+    <string name="login_error_weak_password">Password needs 8+ characters</string>
+    <string name="login_error_network">Can\'t reach the server</string>
+    <string name="logged_in_as">Logged in as %1$s</string>
+    <string name="logout">Log out</string>
 
     <!-- Font -->
     <string name="font_section_title">Font</string>

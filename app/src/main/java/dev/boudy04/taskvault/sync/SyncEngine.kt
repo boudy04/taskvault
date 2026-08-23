@@ -9,6 +9,7 @@ import dev.boudy04.taskvault.data.source.network.TaskApiService
 import dev.boudy04.taskvault.data.source.network.toLocal
 import dev.boudy04.taskvault.data.toDtoWithoutServerId
 import dev.boudy04.taskvault.di.IoDispatcher
+import dev.boudy04.taskvault.settings.SettingsRepository
 import java.io.IOException
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
@@ -25,6 +26,7 @@ class SyncEngine @Inject constructor(
     private val tasks: TaskDao,
     private val ops: PendingOpDao,
     private val json: Json,
+    private val settings: SettingsRepository,
     @IoDispatcher private val io: CoroutineDispatcher,
 ) {
     suspend fun run(): SyncOutcome = withContext(io) {
@@ -73,6 +75,9 @@ class SyncEngine @Inject constructor(
             } catch (e: HttpException) {
                 when (e.code()) {
                     401 -> {
+                        // Expired/invalid JWT: drop the session so the next app open
+                        // shows the login screen instead of retry-looping 401s.
+                        settings.clearSession()
                         ops.updateState(op.opId, PendingOpState.PENDING)
                         return SyncOutcome.FAILURE
                     }

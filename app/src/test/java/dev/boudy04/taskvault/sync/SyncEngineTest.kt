@@ -7,8 +7,11 @@ import dev.boudy04.taskvault.data.source.local.LocalTask
 import dev.boudy04.taskvault.data.source.local.PendingOpEntity
 import dev.boudy04.taskvault.data.source.local.PendingOpState
 import dev.boudy04.taskvault.data.source.local.PendingOpType
+import dev.boudy04.taskvault.data.source.network.AuthRequest
+import dev.boudy04.taskvault.data.source.network.AuthResponse
 import dev.boudy04.taskvault.data.source.network.TaskApiService
 import dev.boudy04.taskvault.data.source.network.TaskDto
+import dev.boudy04.taskvault.settings.FakeSettingsRepository
 import java.io.IOException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -38,6 +41,10 @@ private class FakeApi(
         listError?.let { throw it }
         return listResult
     }
+
+    override suspend fun register(body: AuthRequest): AuthResponse = error("not used")
+
+    override suspend fun login(body: AuthRequest): AuthResponse = error("not used")
 
     override suspend fun getTask(id: Int): TaskDto = error("not used")
 
@@ -70,6 +77,7 @@ class SyncEngineTest {
     private lateinit var api: FakeApi
     private lateinit var tasks: FakeTaskDao
     private lateinit var ops: FakePendingOpDao
+    private lateinit var settings: FakeSettingsRepository
     private lateinit var engine: SyncEngine
 
     @Before
@@ -77,7 +85,8 @@ class SyncEngineTest {
         api = FakeApi()
         tasks = FakeTaskDao()
         ops = FakePendingOpDao()
-        engine = SyncEngine(api, tasks, ops, json, dispatcher)
+        settings = FakeSettingsRepository(initialToken = "jwt-abc", initialUsername = "boudy04")
+        engine = SyncEngine(api, tasks, ops, json, settings, dispatcher)
     }
 
     private fun payload(
@@ -194,6 +203,20 @@ class SyncEngineTest {
 
         assertThat(outcome).isEqualTo(SyncOutcome.FAILURE)
         assertThat(ops.getAll().single().state).isEqualTo(PendingOpState.PENDING)
+    }
+
+    @Test
+    fun unauthorized_401_clearsStoredSession() = runTest(dispatcher) {
+        tasks.upsert(localTask("l6"))
+        enqueue(PendingOpType.CREATE, payload("l6"))
+        api.createError = httpException(401)
+
+        val outcome = engine.run()
+
+        assertThat(outcome).isEqualTo(SyncOutcome.FAILURE)
+        assertThat(settings.sessionToken).isEmpty()
+        assertThat(settings.accountName).isEmpty()
+        assertThat(settings.clearedCount).isEqualTo(1)
     }
 
     @Test

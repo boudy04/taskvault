@@ -21,11 +21,13 @@ class DataStoreSettingsRepositoryTest {
     )
 
     @Test
-    fun defaults_areRailwayAndDemoToken() = runTest {
+    fun defaults_areRailwayAndBlankToken() = runTest {
         val r = repo(backgroundScope)
         val c = r.current()
         assertEquals("https://prject-cv-production.up.railway.app", c.baseUrl)
-        assertEquals("dev-token", c.token)
+        assertEquals("", c.token)
+        assertEquals(false, r.loggedIn.first())
+        assertEquals("", r.username.first())
     }
 
     @Test
@@ -52,5 +54,19 @@ class DataStoreSettingsRepositoryTest {
         assertEquals(true, r.appLock.first())
         r.setAppLock(false)
         assertEquals(false, r.appLock.first())
+    }
+
+    @Test
+    fun session_persists_andClears() = runTest {
+        val r = repo(backgroundScope)
+        r.setSession("jwt-abc", "boudy04")
+        assertEquals("jwt-abc", r.current().token)
+        assertEquals("boudy04", r.username.first())
+        assertEquals(true, r.loggedIn.first())
+
+        r.clearSession()
+        assertEquals("", r.current().token)
+        assertEquals("", r.username.first())
+        assertEquals(false, r.loggedIn.first())
     }
 }

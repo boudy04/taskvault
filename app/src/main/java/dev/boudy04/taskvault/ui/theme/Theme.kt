@@ -53,21 +53,21 @@ private val Outfit = FontFamily(
 private fun outfitTypography(): Typography {
     val t = Typography()
     return Typography(
-        displayLarge = t.displayLarge.copy(fontFamily = Outfit),
-        displayMedium = t.displayMedium.copy(fontFamily = Outfit),
-        displaySmall = t.displaySmall.copy(fontFamily = Outfit),
-        headlineLarge = t.headlineLarge.copy(fontFamily = Outfit),
-        headlineMedium = t.headlineMedium.copy(fontFamily = Outfit),
-        headlineSmall = t.headlineSmall.copy(fontFamily = Outfit),
-        titleLarge = t.titleLarge.copy(fontFamily = Outfit, fontWeight = FontWeight.SemiBold),
-        titleMedium = t.titleMedium.copy(fontFamily = Outfit, fontWeight = FontWeight.SemiBold),
+        displayLarge = t.displayLarge.copy(fontFamily = Outfit, fontWeight = FontWeight.Bold),
+        displayMedium = t.displayMedium.copy(fontFamily = Outfit, fontWeight = FontWeight.Bold),
+        displaySmall = t.displaySmall.copy(fontFamily = Outfit, fontWeight = FontWeight.Bold),
+        headlineLarge = t.headlineLarge.copy(fontFamily = Outfit, fontWeight = FontWeight.Bold),
+        headlineMedium = t.headlineMedium.copy(fontFamily = Outfit, fontWeight = FontWeight.Bold),
+        headlineSmall = t.headlineSmall.copy(fontFamily = Outfit, fontWeight = FontWeight.Bold),
+        titleLarge = t.titleLarge.copy(fontFamily = Outfit, fontWeight = FontWeight.Bold),
+        titleMedium = t.titleMedium.copy(fontFamily = Outfit, fontWeight = FontWeight.Bold),
         titleSmall = t.titleSmall.copy(fontFamily = Outfit, fontWeight = FontWeight.SemiBold),
-        bodyLarge = t.bodyLarge.copy(fontFamily = Outfit),
-        bodyMedium = t.bodyMedium.copy(fontFamily = Outfit),
-        bodySmall = t.bodySmall.copy(fontFamily = Outfit),
-        labelLarge = t.labelLarge.copy(fontFamily = Outfit),
-        labelMedium = t.labelMedium.copy(fontFamily = Outfit),
-        labelSmall = t.labelSmall.copy(fontFamily = Outfit),
+        bodyLarge = t.bodyLarge.copy(fontFamily = Outfit, fontWeight = FontWeight.Medium),
+        bodyMedium = t.bodyMedium.copy(fontFamily = Outfit, fontWeight = FontWeight.Medium),
+        bodySmall = t.bodySmall.copy(fontFamily = Outfit, fontWeight = FontWeight.Medium),
+        labelLarge = t.labelLarge.copy(fontFamily = Outfit, fontWeight = FontWeight.SemiBold),
+        labelMedium = t.labelMedium.copy(fontFamily = Outfit, fontWeight = FontWeight.Medium),
+        labelSmall = t.labelSmall.copy(fontFamily = Outfit, fontWeight = FontWeight.Medium),
     )
 }
 

@@ -106,7 +106,10 @@ class SyncEngine @Inject constructor(
         } catch (e: IOException) {
             return false
         } catch (e: Exception) {
-            // non-connectivity failure (parse/5xx): skip reconcile without crying wolf
+            // Expired/invalid JWT with an empty queue: clear the session so the next
+            // app open shows login instead of a zombie logged-in state, then skip
+            // reconcile like any other non-connectivity failure (parse/5xx).
+            if (e is HttpException && e.code() == 401) settings.clearSession()
             return true
         }
         val protected = ops.getAll().filter { it.state == PendingOpState.PENDING }.map { it.taskLocalId }.toSet()

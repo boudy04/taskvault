@@ -84,9 +84,11 @@ class AddEditTaskViewModel @Inject constructor(
         }
     }
 
-    /** Commits a chip from raw input: trim + lowercase, drop empties/dupes. */
+    /** Commits a chip from raw input: commas stripped (a comma is the stored
+     *  column's separator, so "a,b" as one chip would parse back as two tags),
+     *  then trim + lowercase; drop empties/dupes. */
     fun addTag(raw: String) {
-        val tag = raw.trim().lowercase()
+        val tag = raw.replace(",", "").trim().lowercase()
         if (tag.isEmpty()) return
         _tags.value = (_tags.value + tag).distinct()
     }

@@ -220,6 +220,19 @@ class SyncEngineTest {
     }
 
     @Test
+    fun pullPhase_401_withEmptyQueue_clearsSession_andStaysSilent() = runTest(dispatcher) {
+        api.listError = httpException(401)
+
+        val outcome = engine.run()
+
+        // Pull failure is non-fatal (SUCCESS path), but the expired JWT is dropped.
+        assertThat(outcome).isEqualTo(SyncOutcome.SUCCESS)
+        assertThat(settings.sessionToken).isEmpty()
+        assertThat(settings.accountName).isEmpty()
+        assertThat(settings.clearedCount).isEqualTo(1)
+    }
+
+    @Test
     fun afterDrain_pullMergesServer_deletesVanishedRows_unlessPendingOpsProtectThem() =
         runTest(dispatcher) {
             tasks.upsert(localTask("x", title = "X", serverId = 100))

@@ -210,4 +210,20 @@ class AddEditTaskViewModelTest {
             addEditTaskViewModel.uiState.value.userMessage
         ).isEqualTo(string.empty_task_message)
     }
+
+    @Test
+    fun addTag_stripsCommas_soColumnRoundTripStaysOneChip() {
+        addEditTaskViewModel = AddEditTaskViewModel(
+            tasksRepository,
+            SavedStateHandle(mapOf(TodoDestinationsArgs.TASK_ID_ARG to "0"))
+        )
+        addEditTaskViewModel.addTag("a,b")
+
+        assertThat(addEditTaskViewModel.tags.value).containsExactly("ab")
+        assertThat(addEditTaskViewModel.tags.value.none { it.contains(",") }).isTrue()
+
+        // A comma-only input collapses to nothing and is rejected.
+        addEditTaskViewModel.addTag(",")
+        assertThat(addEditTaskViewModel.tags.value).containsExactly("ab")
+    }
 }

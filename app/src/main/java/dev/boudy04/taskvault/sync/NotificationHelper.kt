@@ -62,13 +62,14 @@ class NotificationHelper @Inject constructor(
             NotificationChannel(
                 CHANNEL_ID,
                 context.getString(R.string.notification_channel_sync_status),
-                NotificationManager.IMPORTANCE_DEFAULT,
+                NotificationManager.IMPORTANCE_LOW,
             ),
         )
     }
 
     private companion object {
-        const val CHANNEL_ID = "sync_status"
+        const val CHANNEL_ID = "sync_status_quiet"
         const val NOTIFICATION_ID = 1001
     }
 }
+

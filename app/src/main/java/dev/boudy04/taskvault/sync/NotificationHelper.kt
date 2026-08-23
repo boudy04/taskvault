@@ -55,6 +55,26 @@ class NotificationHelper @Inject constructor(
         NotificationManagerCompat.from(context).cancel(NOTIFICATION_ID)
     }
 
+    /** Silent "task due" shade notification; tapping it opens the app. */
+    fun showReminder(localId: String, taskTitle: String) {
+        if (!manager.areNotificationsEnabled()) return
+        ensureReminderChannel()
+        val pending = PendingIntent.getActivity(
+            context,
+            localId.hashCode(),
+            Intent(context, TodoActivity::class.java),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val notification = NotificationCompat.Builder(context, REMINDERS_CHANNEL_ID)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle(context.getString(R.string.notification_task_due))
+            .setContentText(taskTitle)
+            .setContentIntent(pending)
+            .setAutoCancel(true)
+            .build()
+        NotificationManagerCompat.from(context).notify(localId.hashCode(), notification)
+    }
+
     private fun ensureChannel() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         if (manager.getNotificationChannel(CHANNEL_ID) != null) return
@@ -67,9 +87,22 @@ class NotificationHelper @Inject constructor(
         )
     }
 
+    private fun ensureReminderChannel() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        if (manager.getNotificationChannel(REMINDERS_CHANNEL_ID) != null) return
+        manager.createNotificationChannel(
+            NotificationChannel(
+                REMINDERS_CHANNEL_ID,
+                context.getString(R.string.notification_channel_reminders),
+                NotificationManager.IMPORTANCE_LOW,
+            ),
+        )
+    }
+
     private companion object {
         const val CHANNEL_ID = "sync_status_quiet"
         const val NOTIFICATION_ID = 1001
+        const val REMINDERS_CHANNEL_ID = "reminders"
     }
 }
 

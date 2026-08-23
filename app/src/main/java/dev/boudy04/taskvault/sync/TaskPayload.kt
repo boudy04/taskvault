@@ -11,4 +11,5 @@ data class TaskPayload(
     val status: String,
     val priority: String,
     val serverId: Int? = null,
+    val dueAt: String? = null,
 )

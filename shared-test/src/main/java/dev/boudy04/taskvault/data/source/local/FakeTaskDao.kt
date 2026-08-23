@@ -83,6 +83,9 @@ class FakeTaskDao(initialTasks: List<LocalTask>? = emptyList()) : TaskDao {
     override suspend fun getCompleted(): List<LocalTask> =
         _tasks?.values?.filter { it.isCompleted } ?: emptyList()
 
+    override suspend fun getDueTasks(): List<LocalTask> =
+        _tasks?.values?.filter { it.dueAt != null } ?: emptyList()
+
     override suspend fun deleteUnsyncedOrphans(): Int {
         _tasks?.apply {
             val originalSize = size

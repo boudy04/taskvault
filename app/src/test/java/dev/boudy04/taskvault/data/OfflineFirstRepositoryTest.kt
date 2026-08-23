@@ -22,14 +22,17 @@ import dev.boudy04.taskvault.data.source.local.FakeTaskDao
 import dev.boudy04.taskvault.data.source.local.LocalTask
 import dev.boudy04.taskvault.data.source.local.PendingOpState
 import dev.boudy04.taskvault.data.source.local.PendingOpType
+import dev.boudy04.taskvault.sync.ReminderScheduler
 import dev.boudy04.taskvault.sync.SyncScheduler
 import dev.boudy04.taskvault.sync.TaskPayload
+import java.time.Instant
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -51,9 +54,22 @@ class OfflineFirstRepositoryTest {
         }
     }
 
+    /** Fake ReminderScheduler recording every schedule/cancel call. */
+    class RecordingReminderScheduler : ReminderScheduler {
+        val scheduled = mutableListOf<Triple<String, String, Long>>()
+        val cancelled = mutableListOf<String>()
+        override fun schedule(localId: String, title: String, dueAtMillis: Long) {
+            scheduled += Triple(localId, title, dueAtMillis)
+        }
+        override fun cancel(localId: String) {
+            cancelled += localId
+        }
+    }
+
     private lateinit var fakeTaskDao: FakeTaskDao
     private lateinit var fakePendingOps: FakePendingOpDao
     private lateinit var syncRequests: RecordingSyncScheduler
+    private lateinit var reminders: RecordingReminderScheduler
 
     private fun repoWithFakes(
         seedTasks: List<LocalTask> = emptyList(),
@@ -61,14 +77,18 @@ class OfflineFirstRepositoryTest {
         fakeTaskDao = FakeTaskDao(seedTasks)
         fakePendingOps = FakePendingOpDao()
         syncRequests = RecordingSyncScheduler()
+        reminders = RecordingReminderScheduler()
         return DefaultTaskRepository(
             localDataSource = fakeTaskDao,
             pendingOps = fakePendingOps,
             syncScheduler = syncRequests,
+            reminders = reminders,
             json = json,
             dispatcher = StandardTestDispatcher(mainDispatcherRule.testDispatcher.scheduler),
         )
     }
+
+    private fun futureIso(): String = Instant.now().plusSeconds(3600).toString()
 
     @Test
     fun createTask_writesRow_enqueuesCreate_andRequestsSync() = runTest {
@@ -150,6 +170,76 @@ class OfflineFirstRepositoryTest {
         assertEquals("active-1", fakeTaskDao.getAll().single().id)
         val ops = fakePendingOps.getAll()
         assertEquals(listOf(PendingOpType.DELETE, PendingOpType.DELETE), ops.map { it.opType })
+        assertEquals(setOf("done-1", "done-2"), reminders.cancelled.toSet())
+    }
+
+    @Test
+    fun createTask_withFutureDue_schedulesReminder() = runTest {
+        val repo = repoWithFakes()
+        val iso = futureIso()
+        val id = repo.createTask("Pay rent", "body", TaskPriority.HIGH, iso)
+        val call = reminders.scheduled.single()
+        assertEquals(id, call.first)
+        assertEquals("Pay rent", call.second)
+        assertTrue(call.third > System.currentTimeMillis())
+        assertEquals(0, reminders.cancelled.size)
+    }
+
+    @Test
+    fun createTask_withoutDue_doesNotSchedule() = runTest {
+        val repo = repoWithFakes()
+        repo.createTask("No date", "body", TaskPriority.MEDIUM)
+        assertEquals(0, reminders.scheduled.size)
+    }
+
+    @Test
+    fun updateTask_withNewDue_replacesAlarm() = runTest {
+        val repo = repoWithFakes()
+        val id = repo.createTask("t", "d", TaskPriority.LOW, futureIso())
+        val laterIso = Instant.now().plusSeconds(7200).toString()
+        repo.updateTask(id, "t2", "d2", TaskPriority.HIGH, laterIso)
+        // old alarm cancelled exactly once, new one armed
+        assertEquals(listOf(id), reminders.cancelled)
+        assertEquals(2, reminders.scheduled.size)
+        assertTrue(fakeTaskDao.getById(id)!!.dueAt == laterIso)
+    }
+
+    @Test
+    fun updateTask_clearingDue_cancelsWithoutRescheduling() = runTest {
+        val repo = repoWithFakes()
+        val id = repo.createTask("t", "d", TaskPriority.LOW, futureIso())
+        repo.updateTask(id, "t", "d", TaskPriority.LOW, null)
+        assertEquals(listOf(id), reminders.cancelled)
+        assertEquals(1, reminders.scheduled.size)
+        assertNull(fakeTaskDao.getById(id)!!.dueAt)
+    }
+
+    @Test
+    fun completeTask_cancelsReminder_activate_reschedulesWhileFuture() = runTest {
+        val repo = repoWithFakes()
+        val id = repo.createTask("t", "d", TaskPriority.MEDIUM, futureIso())
+        repo.completeTask(id)
+        assertEquals(listOf(id), reminders.cancelled)
+
+        repo.activateTask(id)
+        // activation reschedules without an extra cancel: the alarm slot is replaced in place
+        assertEquals(2, reminders.scheduled.size)
+        assertEquals(listOf(id), reminders.cancelled)
+    }
+
+    @Test
+    fun deleteTask_cancelsReminder() = runTest {
+        val seeded = listOf(
+            LocalTask(
+                id = "due-1", title = "Due", description = "d",
+                isCompleted = false, serverId = 7,
+                dueAt = futureIso(),
+            ),
+        )
+        val repo = repoWithFakes(seedTasks = seeded)
+        repo.deleteTask("due-1")
+        assertNull(fakeTaskDao.getById("due-1"))
+        assertEquals(listOf("due-1"), reminders.cancelled)
     }
 
 }

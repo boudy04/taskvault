@@ -16,6 +16,7 @@ data class TaskDto(
     val priority: String = "medium",
     @SerialName("created_at") val createdAt: String = "",
     @SerialName("updated_at") val updatedAt: String = "",
+    @SerialName("due_at") val dueAt: String? = null,
 )
 
 fun TaskStatus.toApi(): String = when (this) {
@@ -53,6 +54,7 @@ fun TaskDto.toLocal(): LocalTask = LocalTask(
     serverId = id,
     createdAt = createdAt,
     updatedAt = updatedAt,
+    dueAt = dueAt,
 )
 
 fun LocalTask.toDto(): TaskDto = TaskDto(
@@ -61,4 +63,5 @@ fun LocalTask.toDto(): TaskDto = TaskDto(
     description = description,
     status = status.toApi(),
     priority = priority.toApi(),
+    dueAt = dueAt,
 )

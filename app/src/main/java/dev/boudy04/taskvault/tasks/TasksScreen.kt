@@ -42,6 +42,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -80,6 +81,7 @@ import dev.boudy04.taskvault.data.TaskPriority
 import dev.boudy04.taskvault.tasks.TasksFilterType.ACTIVE_TASKS
 import dev.boudy04.taskvault.tasks.TasksFilterType.ALL_TASKS
 import dev.boudy04.taskvault.tasks.TasksFilterType.COMPLETED_TASKS
+import dev.boudy04.taskvault.util.DueDates
 import dev.boudy04.taskvault.util.LoadingContent
 import dev.boudy04.taskvault.util.TasksTopAppBar
 
@@ -248,6 +250,26 @@ private fun TaskItem(
                 null
             }
         )
+        task.dueAt?.let { iso ->
+            val overdue = runCatching {
+                java.time.Instant.parse(iso).isBefore(java.time.Instant.now()) && task.isActive
+            }.getOrDefault(false)
+            val dueColor = if (overdue) Color(0xFFB3261E) else MaterialTheme.colorScheme.onSurfaceVariant
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Filled.Schedule,
+                    contentDescription = null,
+                    tint = dueColor,
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    text = DueDates.format(iso).orEmpty(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = dueColor,
+                    modifier = Modifier.padding(start = 4.dp)
+                )
+            }
+        }
         if (isUnsynced) {
             val dotLabel = stringResource(R.string.cd_unsynced_dot)
             Box(

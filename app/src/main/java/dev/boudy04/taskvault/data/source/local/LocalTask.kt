@@ -41,4 +41,5 @@ data class LocalTask(
     var serverId: Int? = null,
     var createdAt: String? = null,
     var updatedAt: String? = null,
+    var dueAt: String? = null,
 )

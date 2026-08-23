@@ -114,6 +114,10 @@ interface TaskDao {
     @Query("SELECT * FROM task WHERE isCompleted = 1")
     suspend fun getCompleted(): List<LocalTask>
 
+    /** Rows carrying a due date; boot receiver re-arms reminders for these. */
+    @Query("SELECT * FROM task WHERE dueAt IS NOT NULL")
+    suspend fun getDueTasks(): List<LocalTask>
+
     @Query("DELETE FROM task WHERE serverId IS NULL AND id NOT IN (SELECT DISTINCT taskLocalId FROM pending_ops)")
     suspend fun deleteUnsyncedOrphans(): Int
 }

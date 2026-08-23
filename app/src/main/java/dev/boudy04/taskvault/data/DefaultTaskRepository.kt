@@ -23,8 +23,10 @@ import dev.boudy04.taskvault.data.source.local.PendingOpType
 import dev.boudy04.taskvault.data.source.local.TaskDao
 import dev.boudy04.taskvault.data.source.network.toApi
 import dev.boudy04.taskvault.di.DefaultDispatcher
+import dev.boudy04.taskvault.sync.ReminderScheduler
 import dev.boudy04.taskvault.sync.SyncScheduler
 import dev.boudy04.taskvault.sync.TaskPayload
+import java.time.Instant
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -43,6 +45,7 @@ class DefaultTaskRepository @Inject constructor(
     private val localDataSource: TaskDao,
     private val pendingOps: PendingOpDao,
     private val syncScheduler: SyncScheduler,
+    private val reminders: ReminderScheduler,
     private val json: Json,
     @DefaultDispatcher private val dispatcher: CoroutineDispatcher,
 ) : TaskRepository {
@@ -51,6 +54,7 @@ class DefaultTaskRepository @Inject constructor(
         title: String,
         description: String,
         priority: TaskPriority,
+        dueAt: String?,
     ): String {
         // ID creation might be a complex operation so it's executed using the supplied
         // coroutine dispatcher
@@ -64,9 +68,11 @@ class DefaultTaskRepository @Inject constructor(
             isCompleted = false,
             status = TaskStatus.TODO,
             priority = priority,
+            dueAt = dueAt,
         )
         localDataSource.upsert(task)
         enqueue(PendingOpType.CREATE, task)
+        scheduleReminder(task.id, task.title, task.dueAt)
         return taskId
     }
 
@@ -75,11 +81,15 @@ class DefaultTaskRepository @Inject constructor(
         title: String,
         description: String,
         priority: TaskPriority,
+        dueAt: String?,
     ) {
         val task = localDataSource.getById(taskId) ?: throw Exception("Task ($taskId) not found")
-        val updated = task.copy(title = title, description = description, priority = priority)
+        val updated = task.copy(title = title, description = description, priority = priority, dueAt = dueAt)
         localDataSource.upsert(updated)
         enqueue(PendingOpType.UPDATE, updated)
+        // dueAt replaces or clears wholesale, so drop any old alarm first
+        reminders.cancel(taskId)
+        scheduleReminder(taskId, updated.title, updated.dueAt)
     }
 
     override suspend fun completeTask(taskId: String) = setStatus(taskId, TaskStatus.DONE)
@@ -92,12 +102,19 @@ class DefaultTaskRepository @Inject constructor(
         val updated = task.copy(status = status, isCompleted = status == TaskStatus.DONE)
         localDataSource.upsert(updated)
         enqueue(PendingOpType.UPDATE, updated)
+        if (status == TaskStatus.DONE) {
+            reminders.cancel(taskId)
+        } else {
+            // re-activation keeps the stored dueAt; re-arm only while it's still future
+            scheduleReminder(taskId, updated.title, updated.dueAt)
+        }
     }
 
     override suspend fun deleteTask(taskId: String) {
         val task = localDataSource.getById(taskId) ?: return
         pendingOps.clearForTask(taskId) // drop stale ops for this row before queueing the tombstone
         localDataSource.deleteById(taskId) // UI reflects deletion instantly
+        reminders.cancel(taskId)
         if (task.serverId != null) enqueue(PendingOpType.DELETE, task)
     }
 
@@ -148,10 +165,20 @@ class DefaultTaskRepository @Inject constructor(
             status = task.status.toApi(),
             priority = task.priority.toApi(),
             serverId = task.serverId,
+            dueAt = task.dueAt,
         )
         pendingOps.insert(
             PendingOpEntity(taskLocalId = task.id, opType = type, payload = json.encodeToString(payload)),
         )
         syncScheduler.requestSync()
+    }
+
+    /** Arms the reminder when the stored due ISO parses to a future instant. */
+    private fun scheduleReminder(localId: String, title: String, dueAt: String?) {
+        if (dueAt == null) return
+        val millis = runCatching { Instant.parse(dueAt).toEpochMilli() }.getOrNull() ?: return
+        if (millis > System.currentTimeMillis()) {
+            reminders.schedule(localId, title, millis)
+        }
     }
 }

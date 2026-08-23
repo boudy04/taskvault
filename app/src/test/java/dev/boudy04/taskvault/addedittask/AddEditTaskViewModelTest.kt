@@ -148,6 +148,55 @@ class AddEditTaskViewModelTest {
         saveTaskAndAssertUserMessage("", "")
     }
 
+    @Test
+    fun loadTasks_dueAtShown() {
+        val iso = "2026-08-24T09:00:00Z"
+        tasksRepository = FakeTaskRepository().apply {
+            addTasks(task.copy(dueAt = iso))
+        }
+        addEditTaskViewModel = AddEditTaskViewModel(
+            tasksRepository,
+            SavedStateHandle(mapOf(TodoDestinationsArgs.TASK_ID_ARG to "0"))
+        )
+
+        assertThat(addEditTaskViewModel.dueAt.value).isEqualTo(iso)
+    }
+
+    @Test
+    fun updateDueAt_thenSave_persistsIsoToRepository() {
+        val iso = "2026-08-24T09:00:00Z"
+        addEditTaskViewModel = AddEditTaskViewModel(
+            tasksRepository,
+            SavedStateHandle(mapOf(TodoDestinationsArgs.TASK_ID_ARG to "0"))
+        )
+        addEditTaskViewModel.apply {
+            updateTitle("New Title")
+            updateDescription("Some Description")
+            updateDueAt(iso)
+        }
+        addEditTaskViewModel.saveTask()
+
+        assertThat(tasksRepository.savedTasks.value.values.first().dueAt).isEqualTo(iso)
+    }
+
+    @Test
+    fun clearDueAt_thenSave_storesNull() {
+        val iso = "2026-08-24T09:00:00Z"
+        tasksRepository = FakeTaskRepository().apply {
+            addTasks(task.copy(dueAt = iso))
+        }
+        addEditTaskViewModel = AddEditTaskViewModel(
+            tasksRepository,
+            SavedStateHandle(mapOf(TodoDestinationsArgs.TASK_ID_ARG to "0"))
+        )
+        addEditTaskViewModel.apply {
+            updateDueAt(null)
+        }
+        addEditTaskViewModel.saveTask()
+
+        assertThat(tasksRepository.savedTasks.value.values.first().dueAt).isNull()
+    }
+
     private fun saveTaskAndAssertUserMessage(title: String, description: String) {
         addEditTaskViewModel.apply {
             updateTitle(title)

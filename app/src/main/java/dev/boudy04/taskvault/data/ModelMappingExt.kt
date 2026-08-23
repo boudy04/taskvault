@@ -43,6 +43,7 @@ fun Task.toLocal() = LocalTask(
 ).also {
     it.status = status
     it.priority = priority
+    it.dueAt = dueAt
 }
 
 fun List<Task>.toLocal() = map(Task::toLocal)
@@ -54,6 +55,7 @@ fun LocalTask.toExternal() = Task(
     description = description,
     status = if (isCompleted) TaskStatus.DONE else TaskStatus.TODO,
     priority = priority,
+    dueAt = dueAt,
 )
 
 // Note: JvmName is used to provide a unique name for each extension function with the same name.
@@ -69,6 +71,7 @@ fun TaskPayload.toDtoWithoutServerId() = TaskDto(
     description = description,
     status = status,
     priority = priority,
+    dueAt = dueAt,
 )
 
 fun LocalTask.copyFromDto(dto: TaskDto) = copy(
@@ -79,4 +82,5 @@ fun LocalTask.copyFromDto(dto: TaskDto) = copy(
     priority = dto.priority.toTaskPriority(),
     createdAt = dto.createdAt,
     updatedAt = dto.updatedAt,
+    dueAt = dto.dueAt,
 )

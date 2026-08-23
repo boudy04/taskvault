@@ -39,6 +39,7 @@ interface TaskRepository {
         title: String,
         description: String,
         priority: TaskPriority = TaskPriority.MEDIUM,
+        dueAt: String? = null,
     ): String
 
     suspend fun updateTask(
@@ -46,6 +47,7 @@ interface TaskRepository {
         title: String,
         description: String,
         priority: TaskPriority = TaskPriority.MEDIUM,
+        dueAt: String? = null,
     )
 
     suspend fun completeTask(taskId: String)

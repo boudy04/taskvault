@@ -33,6 +33,7 @@ data class Task(
     val description: String = "",
     val status: TaskStatus = TaskStatus.TODO,
     val priority: TaskPriority = TaskPriority.MEDIUM,
+    val dueAt: String? = null,
     val id: String,
 ) {
     val titleForList: String

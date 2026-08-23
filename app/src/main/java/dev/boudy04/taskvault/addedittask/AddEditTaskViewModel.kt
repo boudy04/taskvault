@@ -63,6 +63,10 @@ class AddEditTaskViewModel @Inject constructor(
     private val _priority = MutableStateFlow(TaskPriority.MEDIUM)
     val priority: StateFlow<TaskPriority> = _priority.asStateFlow()
 
+    /** ISO-8601 UTC due timestamp; null = no reminder. */
+    private val _dueAt = MutableStateFlow<String?>(null)
+    val dueAt: StateFlow<String?> = _dueAt.asStateFlow()
+
     init {
         if (taskId != null) {
             loadTask(taskId)
@@ -107,8 +111,12 @@ class AddEditTaskViewModel @Inject constructor(
         _priority.value = newPriority
     }
 
+    fun updateDueAt(newDueAt: String?) {
+        _dueAt.value = newDueAt
+    }
+
     private fun createNewTask() = viewModelScope.launch {
-        taskRepository.createTask(uiState.value.title, uiState.value.description, _priority.value)
+        taskRepository.createTask(uiState.value.title, uiState.value.description, _priority.value, _dueAt.value)
         _uiState.update {
             it.copy(isTaskSaved = true)
         }
@@ -124,6 +132,7 @@ class AddEditTaskViewModel @Inject constructor(
                 title = uiState.value.title,
                 description = uiState.value.description,
                 priority = _priority.value,
+                dueAt = _dueAt.value,
             )
             _uiState.update {
                 it.copy(isTaskSaved = true)
@@ -139,6 +148,7 @@ class AddEditTaskViewModel @Inject constructor(
             taskRepository.getTask(taskId).let { task ->
                 if (task != null) {
                     _priority.value = task.priority
+                    _dueAt.value = task.dueAt
                     _uiState.update {
                         it.copy(
                             title = task.title,

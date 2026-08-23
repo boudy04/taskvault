@@ -19,8 +19,11 @@
 package dev.boudy04.taskvault.addedittask
 
 import androidx.annotation.StringRes
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -30,12 +33,17 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Done
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -43,8 +51,12 @@ import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -62,6 +74,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.boudy04.taskvault.R
 import dev.boudy04.taskvault.data.TaskPriority
 import dev.boudy04.taskvault.util.AddEditTaskTopAppBar
+import dev.boudy04.taskvault.util.DueDates
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneId
 
 @Composable
 fun AddEditTaskScreen(
@@ -88,6 +105,7 @@ fun AddEditTaskScreen(
     ) { paddingValues ->
         val uiState by viewModel.uiState.collectAsStateWithLifecycle()
         val priority by viewModel.priority.collectAsStateWithLifecycle()
+        val dueAt by viewModel.dueAt.collectAsStateWithLifecycle()
 
         AddEditTaskContent(
             loading = uiState.isLoading,
@@ -97,6 +115,8 @@ fun AddEditTaskScreen(
             onDescriptionChanged = viewModel::updateDescription,
             priority = priority,
             onPriorityChanged = viewModel::updatePriority,
+            dueAt = dueAt,
+            onDueAtChanged = viewModel::updateDueAt,
             modifier = Modifier.padding(paddingValues)
         )
 
@@ -127,6 +147,8 @@ private fun AddEditTaskContent(
     priority: TaskPriority,
     onPriorityChanged: (TaskPriority) -> Unit,
     onDescriptionChanged: (String) -> Unit,
+    dueAt: String?,
+    onDueAtChanged: (String?) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var isRefreshing by remember { mutableStateOf(false) }
@@ -176,7 +198,161 @@ private fun AddEditTaskContent(
                 colors = textFieldColors
             )
             PriorityPicker(priority = priority, onPriorityChanged = onPriorityChanged)
+            DuePicker(dueAt = dueAt, onDueAtChanged = onDueAtChanged)
         }
+    }
+}
+
+/**
+ * "Due" row + pick flow per R20: chips (Today / Tomorrow / Pick date…) then Material3
+ * TimePicker; [Clear] removes the due. The ViewModel stores ISO-8601 UTC.
+ */
+@Composable
+private fun DuePicker(
+    dueAt: String?,
+    onDueAtChanged: (String?) -> Unit,
+) {
+    var showChips by remember { mutableStateOf(false) }
+    var showDatePicker by remember { mutableStateOf(false) }
+    var showTimePicker by remember { mutableStateOf(false) }
+    var pickedDate by remember { mutableStateOf<LocalDate?>(null) }
+
+    val textFieldColors = OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = Color.Transparent,
+        unfocusedBorderColor = Color.Transparent,
+        cursorColor = MaterialTheme.colorScheme.onSecondary
+    )
+
+    // The read-only field swallows taps, so a transparent overlay routes them to the picker.
+    Box(modifier = Modifier.fillMaxWidth()) {
+        OutlinedTextField(
+            value = DueDates.format(dueAt) ?: stringResource(id = R.string.due_none),
+            onValueChange = { },
+            readOnly = true,
+            label = { Text(stringResource(id = R.string.due_label)) },
+            trailingIcon = { Icon(Icons.Filled.Schedule, contentDescription = null) },
+            modifier = Modifier.fillMaxWidth(),
+            colors = textFieldColors
+        )
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .clickable { showChips = true }
+        )
+    }
+
+    if (showChips) {
+        val selectedTime = dueAt?.let {
+            runCatching { DueDates.toLocalDateTime(it).toLocalTime() }.getOrNull()
+        } ?: DueDates.nextFullHour().toLocalTime()
+
+        AlertDialog(
+            onDismissRequest = { showChips = false },
+            title = { Text(stringResource(id = R.string.due_label)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(
+                            selected = false,
+                            onClick = {
+                                val local = LocalDate.now().atTime(selectedTime)
+                                onDueAtChanged(DueDates.toIso(local))
+                                showChips = false
+                            },
+                            label = { Text(stringResource(id = R.string.due_today)) }
+                        )
+                        FilterChip(
+                            selected = false,
+                            onClick = {
+                                val local = LocalDate.now().plusDays(1).atTime(selectedTime)
+                                onDueAtChanged(DueDates.toIso(local))
+                                showChips = false
+                            },
+                            label = { Text(stringResource(id = R.string.due_tomorrow)) }
+                        )
+                        FilterChip(
+                            selected = false,
+                            onClick = {
+                                showChips = false
+                                showDatePicker = true
+                            },
+                            label = { Text(stringResource(id = R.string.due_pick_date)) }
+                        )
+                    }
+                    if (dueAt != null) {
+                        FilterChip(
+                            selected = false,
+                            onClick = {
+                                onDueAtChanged(null)
+                                showChips = false
+                            },
+                            label = { Text(stringResource(id = R.string.due_clear)) }
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showChips = false }) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+            }
+        )
+    }
+
+    if (showDatePicker) {
+        val dateState = rememberDatePickerState()
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pickedDate = dateState.selectedDateMillis?.let { millis ->
+                            Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
+                        } ?: LocalDate.now()
+                        showDatePicker = false
+                        showTimePicker = true
+                    }
+                ) { Text(stringResource(android.R.string.ok)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+            }
+        ) {
+            DatePicker(state = dateState)
+        }
+    }
+
+    if (showTimePicker) {
+        val initial = dueAt?.let {
+            runCatching { DueDates.toLocalDateTime(it).toLocalTime() }.getOrNull()
+        } ?: DueDates.nextFullHour().toLocalTime()
+        val timeState = rememberTimePickerState(
+            initialHour = initial.hour,
+            initialMinute = initial.minute,
+            is24Hour = true,
+        )
+        AlertDialog(
+            onDismissRequest = { showTimePicker = false },
+            title = { Text(stringResource(id = R.string.due_label)) },
+            text = { TimePicker(state = timeState) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val local = (pickedDate ?: LocalDate.now())
+                            .atTime(timeState.hour, timeState.minute)
+                        onDueAtChanged(DueDates.toIso(local))
+                        showTimePicker = false
+                    }
+                ) { Text(stringResource(android.R.string.ok)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTimePicker = false }) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+            }
+        )
     }
 }
 

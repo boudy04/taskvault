@@ -19,6 +19,8 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:allowBackup="false"
@@ -46,6 +48,18 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/taskvault_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name="dev.boudy04.taskvault.sync.ReminderReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name="dev.boudy04.taskvault.sync.ReminderBootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
         </receiver>
 
         <provider

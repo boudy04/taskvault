@@ -16,6 +16,7 @@
 
 package dev.boudy04.taskvault.di
 
+import android.app.AlarmManager
 import android.content.Context
 import android.net.ConnectivityManager
 import androidx.room.Room
@@ -29,6 +30,8 @@ import dev.boudy04.taskvault.data.source.local.ToDoDatabase
 import dev.boudy04.taskvault.data.source.network.AuthInterceptor
 import dev.boudy04.taskvault.data.source.network.BaseUrlInterceptor
 import dev.boudy04.taskvault.data.source.network.TaskApiService
+import dev.boudy04.taskvault.sync.AlarmReminderScheduler
+import dev.boudy04.taskvault.sync.ReminderScheduler
 import dev.boudy04.taskvault.sync.SyncScheduler
 import dev.boudy04.taskvault.sync.WorkManagerSyncScheduler
 import dagger.Binds
@@ -56,6 +59,10 @@ abstract class RepositoryModule {
     @Singleton
     @Binds
     abstract fun bindSyncScheduler(impl: WorkManagerSyncScheduler): SyncScheduler
+
+    @Singleton
+    @Binds
+    abstract fun bindReminderScheduler(impl: AlarmReminderScheduler): ReminderScheduler
 }
 
 @Module
@@ -130,4 +137,9 @@ object WorkManagerModule {
     @Singleton
     fun provideConnectivityManager(@ApplicationContext context: Context): ConnectivityManager =
         context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+
+    @Provides
+    @Singleton
+    fun provideAlarmManager(@ApplicationContext context: Context): AlarmManager =
+        context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 }

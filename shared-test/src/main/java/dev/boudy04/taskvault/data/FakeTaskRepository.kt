@@ -61,9 +61,10 @@ class FakeTaskRepository : TaskRepository {
         title: String,
         description: String,
         priority: TaskPriority,
+        dueAt: String?,
     ): String {
         val taskId = generateTaskId()
-        Task(title = title, description = description, priority = priority, id = taskId).also {
+        Task(title = title, description = description, priority = priority, dueAt = dueAt, id = taskId).also {
             saveTask(it)
         }
         return taskId
@@ -96,11 +97,13 @@ class FakeTaskRepository : TaskRepository {
         title: String,
         description: String,
         priority: TaskPriority,
+        dueAt: String?,
     ) {
         val updatedTask = _savedTasks.value[taskId]?.copy(
             title = title,
             description = description,
             priority = priority,
+            dueAt = dueAt,
         ) ?: throw Exception("Task (id $taskId) not found")
 
         saveTask(updatedTask)

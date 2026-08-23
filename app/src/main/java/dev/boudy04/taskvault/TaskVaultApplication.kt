@@ -20,6 +20,7 @@ import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import dagger.hilt.android.HiltAndroidApp
+import dev.boudy04.taskvault.widget.WidgetUpdater
 import javax.inject.Inject
 import timber.log.Timber
 import timber.log.Timber.DebugTree
@@ -34,6 +35,9 @@ class TaskVaultApplication : Application(), Configuration.Provider {
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
 
+    @Inject
+    lateinit var widgetUpdater: WidgetUpdater
+
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
             .setWorkerFactory(workerFactory)
@@ -42,5 +46,6 @@ class TaskVaultApplication : Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
         if (BuildConfig.DEBUG) Timber.plant(DebugTree())
+        widgetUpdater.observe()
     }
 }

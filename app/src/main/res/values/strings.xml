@@ -82,4 +82,14 @@
     <string name="settings_save">Save</string>
     <string name="settings_test_connection">Test connection</string>
 
+    <!-- App lock -->
+    <string name="app_lock">App lock</string>
+    <string name="app_lock_verify">Verify to enable App lock</string>
+    <string name="unlock_title">Unlock TaskVault</string>
+    <string name="unlock_retry">Retry</string>
+
+    <!-- Widget -->
+    <string name="widget_open_count" translatable="false">%1$d open</string>
+    <string name="widget_no_active_tasks">No active tasks</string>
+
 </resources>

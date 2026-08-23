@@ -36,6 +36,7 @@ import okhttp3.Request
 data class SettingsUiState(
     val baseUrl: String = "",
     val token: String = "",
+    val appLock: Boolean = false,
     val resultText: String? = null,
 )
 
@@ -55,6 +56,9 @@ class SettingsViewModel @Inject constructor(
             val current = settings.current()
             _uiState.update { it.copy(baseUrl = current.baseUrl, token = current.token) }
         }
+        viewModelScope.launch {
+            settings.appLock.collect { lock -> _uiState.update { it.copy(appLock = lock) } }
+        }
     }
 
     fun updateBaseUrl(value: String) {
@@ -70,6 +74,10 @@ class SettingsViewModel @Inject constructor(
             settings.setConfig(ServerConfig(_uiState.value.baseUrl.trim(), _uiState.value.token))
             _uiState.update { it.copy(resultText = SAVED_MESSAGE) }
         }
+    }
+
+    fun setAppLock(enabled: Boolean) {
+        viewModelScope.launch { settings.setAppLock(enabled) }
     }
 
     // ponytail: one-shot OkHttpClient per test press; swap for injected client if this grows

@@ -43,4 +43,14 @@ class DataStoreSettingsRepositoryTest {
         r.setThemeMode(ThemeMode.DARK)
         assertEquals(ThemeMode.DARK, r.themeMode.first())
     }
+
+    @Test
+    fun appLock_persists() = runTest {
+        val r = repo(backgroundScope)
+        assertEquals(false, r.appLock.first())
+        r.setAppLock(true)
+        assertEquals(true, r.appLock.first())
+        r.setAppLock(false)
+        assertEquals(false, r.appLock.first())
+    }
 }

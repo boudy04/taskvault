@@ -113,6 +113,8 @@ dependencies {
 
     // App dependencies
     implementation(libs.androidx.annotation)
+    implementation(libs.androidx.biometric)
+    implementation(libs.androidx.glance.appwidget)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.timber)
     implementation(libs.androidx.test.espresso.idling.resources)

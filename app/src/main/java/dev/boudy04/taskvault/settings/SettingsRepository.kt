@@ -3,6 +3,7 @@ package dev.boudy04.taskvault.settings
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -15,9 +16,11 @@ enum class ThemeMode { SYSTEM, LIGHT, DARK }
 interface SettingsRepository {
     val config: Flow<ServerConfig>
     val themeMode: Flow<ThemeMode>
+    val appLock: Flow<Boolean>
     suspend fun current(): ServerConfig
     suspend fun setConfig(config: ServerConfig)
     suspend fun setThemeMode(mode: ThemeMode)
+    suspend fun setAppLock(enabled: Boolean)
 }
 
 private const val DEFAULT_URL = "https://prject-cv-production.up.railway.app"
@@ -32,6 +35,7 @@ class DataStoreSettingsRepository @Inject constructor(
         val url = stringPreferencesKey("server_url")
         val token = stringPreferencesKey("auth_token")
         val themeMode = stringPreferencesKey("theme_mode")
+        val appLock = booleanPreferencesKey("app_lock")
     }
 
     override val config: Flow<ServerConfig> = dataStore.data.map { p ->
@@ -55,6 +59,14 @@ class DataStoreSettingsRepository @Inject constructor(
     override suspend fun setThemeMode(mode: ThemeMode) {
         dataStore.edit { p ->
             p[Keys.themeMode] = mode.name
+        }
+    }
+
+    override val appLock: Flow<Boolean> = dataStore.data.map { p -> p[Keys.appLock] ?: false }
+
+    override suspend fun setAppLock(enabled: Boolean) {
+        dataStore.edit { p ->
+            p[Keys.appLock] = enabled
         }
     }
 }

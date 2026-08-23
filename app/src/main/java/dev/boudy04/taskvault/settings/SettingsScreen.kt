@@ -16,6 +16,9 @@
 
 package dev.boudy04.taskvault.settings
 
+import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_WEAK
+import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
+import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,20 +29,26 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import dev.boudy04.taskvault.ui.theme.PrimaryPillButton
 import dev.boudy04.taskvault.ui.theme.QuietPillButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.boudy04.taskvault.R
@@ -63,8 +72,10 @@ fun SettingsScreen(
         SettingsContent(
             baseUrl = uiState.baseUrl,
             token = uiState.token,
+            appLock = uiState.appLock,
             onBaseUrlChanged = viewModel::updateBaseUrl,
             onTokenChanged = viewModel::updateToken,
+            onAppLockChanged = viewModel::setAppLock,
             onSave = viewModel::saveConfig,
             onTestConnection = viewModel::testConnection,
             modifier = Modifier.padding(paddingValues)
@@ -83,12 +94,15 @@ fun SettingsScreen(
 private fun SettingsContent(
     baseUrl: String,
     token: String,
+    appLock: Boolean,
     onBaseUrlChanged: (String) -> Unit,
     onTokenChanged: (String) -> Unit,
+    onAppLockChanged: (Boolean) -> Unit,
     onSave: () -> Unit,
     onTestConnection: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -111,6 +125,30 @@ private fun SettingsContent(
             modifier = Modifier.fillMaxWidth()
         )
         Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = stringResource(id = R.string.app_lock),
+                style = MaterialTheme.typography.titleMedium
+            )
+            Switch(
+                checked = appLock,
+                // Enabling only after a successful biometric/credential verify, so users can
+                // never lock themselves out without a working authenticator.
+                onCheckedChange = { checked ->
+                    if (checked) {
+                        (context as? FragmentActivity)?.verifyThen {
+                            onAppLockChanged(true)
+                        }
+                    } else {
+                        onAppLockChanged(false)
+                    }
+                }
+            )
+        }
+        Row(
             modifier = Modifier.padding(top = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(dimensionResource(id = R.dimen.list_item_padding))
         ) {
@@ -124,6 +162,24 @@ private fun SettingsContent(
     }
 }
 
+private fun FragmentActivity.verifyThen(onSuccess: () -> Unit) {
+    val prompt = BiometricPrompt(
+        this,
+        ContextCompat.getMainExecutor(this),
+        object : BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                onSuccess()
+            }
+        },
+    )
+    prompt.authenticate(
+        BiometricPrompt.PromptInfo.Builder()
+            .setTitle(getString(R.string.app_lock_verify))
+            .setAllowedAuthenticators(BIOMETRIC_WEAK or DEVICE_CREDENTIAL)
+            .build()
+    )
+}
+
 @Preview
 @Composable
 private fun SettingsContentPreview() {
@@ -131,8 +187,10 @@ private fun SettingsContentPreview() {
         SettingsContent(
             baseUrl = "https://example.com",
             token = "token",
+            appLock = false,
             onBaseUrlChanged = { },
             onTokenChanged = { },
+            onAppLockChanged = { },
             onSave = { },
             onTestConnection = { }
         )

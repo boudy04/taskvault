@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright 2022 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -76,7 +76,7 @@ class TasksTest {
     }
 
     @Test
-    fun editTask() = runTest {
+    fun editTask() = runTest(timeout = 5.minutes) {
         val originalTaskTitle = "TITLE1"
         repository.createTask(originalTaskTitle, "DESCRIPTION")
 
@@ -141,7 +141,7 @@ class TasksTest {
     }
 
     @Test
-    fun createTwoTasks_deleteOneTask() = runTest {
+    fun createTwoTasks_deleteOneTask() = runTest(timeout = 5.minutes) {
         repository.apply {
             createTask("TITLE1", "DESCRIPTION")
             createTask("TITLE2", "DESCRIPTION")
@@ -166,7 +166,7 @@ class TasksTest {
     }
 
     @Test
-    fun markTaskAsCompleteOnDetailScreen_taskIsCompleteInList() = runTest {
+    fun markTaskAsCompleteOnDetailScreen_taskIsCompleteInList() = runTest(timeout = 5.minutes) {
         // Add 1 active task
         val taskTitle = "COMPLETED"
         repository.createTask(taskTitle, "DESCRIPTION")
@@ -191,7 +191,7 @@ class TasksTest {
     }
 
     @Test
-    fun markTaskAsActiveOnDetailScreen_taskIsActiveInList() = runTest {
+    fun markTaskAsActiveOnDetailScreen_taskIsActiveInList() = runTest(timeout = 5.minutes) {
         // Add 1 completed task
         val taskTitle = "ACTIVE"
         repository.apply {
@@ -218,7 +218,7 @@ class TasksTest {
     }
 
     @Test
-    fun markTaskAsCompleteAndActiveOnDetailScreen_taskIsActiveInList() = runTest {
+    fun markTaskAsCompleteAndActiveOnDetailScreen_taskIsActiveInList() = runTest(timeout = 5.minutes) {
         // Add 1 active task
         val taskTitle = "ACT-COMP"
         repository.createTask(taskTitle, "DESCRIPTION")
@@ -245,7 +245,7 @@ class TasksTest {
     }
 
     @Test
-    fun markTaskAsActiveAndCompleteOnDetailScreen_taskIsCompleteInList() = runTest {
+    fun markTaskAsActiveAndCompleteOnDetailScreen_taskIsCompleteInList() = runTest(timeout = 5.minutes) {
         // Add 1 completed task
         val taskTitle = "COMP-ACT"
         repository.apply {

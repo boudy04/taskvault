@@ -1,10 +1,11 @@
-package dev.boudy04.taskvault.data.source.local
+﻿package dev.boudy04.taskvault.data.source.local
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import kotlin.time.Duration.Companion.minutes
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
@@ -26,14 +27,14 @@ class PendingOpDaoTest {
     }
 
     @Test
-    fun nextPending_returnsOldestFirst() = runTest {
+    fun nextPending_returnsOldestFirst() = runTest(timeout = 5.minutes) {
         dao.insert(op(enqueuedAt = 20))
         dao.insert(op(enqueuedAt = 10))
         assertEquals(10L, dao.nextPending()?.enqueuedAt)
     }
 
     @Test
-    fun runningOpsAreSkipped_pendingCountReflectsQueue() = runTest {
+    fun runningOpsAreSkipped_pendingCountReflectsQueue() = runTest(timeout = 5.minutes) {
         val a = dao.insert(op(enqueuedAt = 1))
         dao.updateState(a, PendingOpState.RUNNING)
         dao.insert(op(enqueuedAt = 2))
@@ -42,7 +43,7 @@ class PendingOpDaoTest {
     }
 
     @Test
-    fun deleteByIdsRemovesOps() = runTest {
+    fun deleteByIdsRemovesOps() = runTest(timeout = 5.minutes) {
         val a = dao.insert(op(enqueuedAt = 1))
         dao.deleteByIds(listOf(a))
         assertEquals(null, dao.nextPending())

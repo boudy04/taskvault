@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright 2022 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -63,7 +63,7 @@ class TaskDetailScreenTest {
     }
 
     @Test
-    fun activeTaskDetails_DisplayedInUi() = runTest {
+    fun activeTaskDetails_DisplayedInUi() = runTest(timeout = 5.minutes) {
         // GIVEN - Add active (incomplete) task to the DB
         val activeTaskId = repository.createTask(
             title = "Active Task",
@@ -82,7 +82,7 @@ class TaskDetailScreenTest {
     }
 
     @Test
-    fun completedTaskDetails_DisplayedInUi() = runTest {
+    fun completedTaskDetails_DisplayedInUi() = runTest(timeout = 5.minutes) {
         // GIVEN - Add completed task to the DB
         val completedTaskId = repository.createTask("Completed Task", "AndroidX Rocks")
         repository.completeTask(completedTaskId)

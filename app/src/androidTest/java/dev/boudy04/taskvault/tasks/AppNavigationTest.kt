@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright 2022 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,7 +34,8 @@ import dev.boudy04.taskvault.TodoTheme
 import dev.boudy04.taskvault.data.TaskRepository
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
+import kotlin.time.Duration.Companion.minutes
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -128,7 +129,7 @@ class AppNavigationTest {
     }
 
     @Test
-    fun taskDetailScreen_doubleUIBackButton() = runBlocking {
+    fun taskDetailScreen_doubleUIBackButton() = runTest(timeout = 5.minutes) {
         val taskName = "UI <- button"
         taskRepository.createTask(taskName, "Description")
 
@@ -157,7 +158,7 @@ class AppNavigationTest {
     }
 
     @Test
-    fun taskDetailScreen_doubleBackButton() = runBlocking {
+    fun taskDetailScreen_doubleBackButton() = runTest(timeout = 5.minutes) {
         val taskName = "Back button"
         taskRepository.createTask(taskName, "Description")
 

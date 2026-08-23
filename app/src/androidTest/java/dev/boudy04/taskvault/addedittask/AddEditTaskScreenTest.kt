@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright 2019 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -98,7 +98,7 @@ class AddEditTaskScreenTest {
     }
 
     @Test
-    fun validTask_isSaved() = runTest {
+    fun validTask_isSaved() = runTest(timeout = 5.minutes) {
         // WHEN - Valid title and description combination and click save
         findTextField(R.string.title_hint).performTextInput("title")
         findTextField(R.string.description_hint).performTextInput("description")

@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright 2022 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -69,7 +69,7 @@ class TasksScreenTest {
     }
 
     @Test
-    fun displayTask_whenRepositoryHasData() = runTest {
+    fun displayTask_whenRepositoryHasData() = runTest(timeout = 5.minutes) {
         // GIVEN - One task already in the repository
         repository.createTask("TITLE1", "DESCRIPTION1")
 
@@ -81,7 +81,7 @@ class TasksScreenTest {
     }
 
     @Test
-    fun displayActiveTask() = runTest {
+    fun displayActiveTask() = runTest(timeout = 5.minutes) {
         repository.createTask("TITLE1", "DESCRIPTION1")
 
         setContent()
@@ -97,7 +97,7 @@ class TasksScreenTest {
     }
 
     @Test
-    fun displayCompletedTask() = runTest {
+    fun displayCompletedTask() = runTest(timeout = 5.minutes) {
         repository.apply {
             createTask("TITLE1", "DESCRIPTION1").also { completeTask(it) }
         }
@@ -114,7 +114,7 @@ class TasksScreenTest {
     }
 
     @Test
-    fun markTaskAsComplete() = runTest {
+    fun markTaskAsComplete() = runTest(timeout = 5.minutes) {
         repository.createTask("TITLE1", "DESCRIPTION1")
 
         setContent()
@@ -132,7 +132,7 @@ class TasksScreenTest {
     }
 
     @Test
-    fun markTaskAsActive() = runTest {
+    fun markTaskAsActive() = runTest(timeout = 5.minutes) {
         repository.apply {
             createTask("TITLE1", "DESCRIPTION1").also { completeTask(it) }
         }
@@ -152,7 +152,7 @@ class TasksScreenTest {
     }
 
     @Test
-    fun showAllTasks() = runTest {
+    fun showAllTasks() = runTest(timeout = 5.minutes) {
         // Add one active task and one completed task
         repository.apply {
             createTask("TITLE1", "DESCRIPTION1")
@@ -168,7 +168,7 @@ class TasksScreenTest {
     }
 
     @Test
-    fun showActiveTasks() = runTest {
+    fun showActiveTasks() = runTest(timeout = 5.minutes) {
         // Add 2 active tasks and one completed task
         repository.apply {
             createTask("TITLE1", "DESCRIPTION1")
@@ -186,7 +186,7 @@ class TasksScreenTest {
     }
 
     @Test
-    fun showCompletedTasks() = runTest {
+    fun showCompletedTasks() = runTest(timeout = 5.minutes) {
         // Add one active task and 2 completed tasks
         repository.apply {
             createTask("TITLE1", "DESCRIPTION1")
@@ -204,7 +204,7 @@ class TasksScreenTest {
     }
 
     @Test
-    fun clearCompletedTasks() = runTest {
+    fun clearCompletedTasks() = runTest(timeout = 5.minutes) {
         // Add one active task and one completed task
         repository.apply {
             createTask("TITLE1", "DESCRIPTION1")

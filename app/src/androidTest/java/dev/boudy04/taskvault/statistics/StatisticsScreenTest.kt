@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright 2022 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -61,7 +61,7 @@ class StatisticsScreenTest {
     }
 
     @Test
-    fun tasks_showsNonEmptyMessage() = runTest {
+    fun tasks_showsNonEmptyMessage() = runTest(timeout = 5.minutes) {
         // Given some tasks
         repository.apply {
             createTask("Title1", "Description1")

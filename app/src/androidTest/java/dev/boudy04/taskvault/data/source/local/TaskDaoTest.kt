@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright 2019 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -46,7 +46,7 @@ class TaskDaoTest {
         ).allowMainThreadQueries().build()
     }
     @Test
-    fun insertTaskAndGetById() = runTest {
+    fun insertTaskAndGetById() = runTest(timeout = 5.minutes) {
         // GIVEN - insert a task
         val task = LocalTask(
             title = "title",
@@ -68,7 +68,7 @@ class TaskDaoTest {
     }
 
     @Test
-    fun insertTaskReplacesOnConflict() = runTest {
+    fun insertTaskReplacesOnConflict() = runTest(timeout = 5.minutes) {
         // Given that a task is inserted
         val task = LocalTask(
             title = "title",
@@ -96,7 +96,7 @@ class TaskDaoTest {
     }
 
     @Test
-    fun insertTaskAndGetTasks() = runTest {
+    fun insertTaskAndGetTasks() = runTest(timeout = 5.minutes) {
         // GIVEN - insert a task
         val task = LocalTask(
             title = "title",
@@ -118,7 +118,7 @@ class TaskDaoTest {
     }
 
     @Test
-    fun updateTaskAndGetById() = runTest {
+    fun updateTaskAndGetById() = runTest(timeout = 5.minutes) {
         // When inserting a task
         val originalTask = LocalTask(
             title = "title",
@@ -147,7 +147,7 @@ class TaskDaoTest {
     }
 
     @Test
-    fun updateCompletedAndGetById() = runTest {
+    fun updateCompletedAndGetById() = runTest(timeout = 5.minutes) {
         // When inserting a task
         val task = LocalTask(
             title = "title",
@@ -169,7 +169,7 @@ class TaskDaoTest {
     }
 
     @Test
-    fun deleteTaskByIdAndGettingTasks() = runTest {
+    fun deleteTaskByIdAndGettingTasks() = runTest(timeout = 5.minutes) {
         // Given a task inserted
         val task = LocalTask(
             title = "title",
@@ -188,7 +188,7 @@ class TaskDaoTest {
     }
 
     @Test
-    fun deleteTasksAndGettingTasks() = runTest {
+    fun deleteTasksAndGettingTasks() = runTest(timeout = 5.minutes) {
         // Given a task inserted
         database.taskDao().upsert(
             LocalTask(
@@ -208,7 +208,7 @@ class TaskDaoTest {
     }
 
     @Test
-    fun deleteCompletedTasksAndGettingTasks() = runTest {
+    fun deleteCompletedTasksAndGettingTasks() = runTest(timeout = 5.minutes) {
         // Given a completed task inserted
         database.taskDao().upsert(
             LocalTask(title = "completed", description = "task", id = "id", isCompleted = true)

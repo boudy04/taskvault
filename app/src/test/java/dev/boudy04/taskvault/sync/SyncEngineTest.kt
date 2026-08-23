@@ -28,12 +28,16 @@ private class FakeApi(
     var updateResult: TaskDto = TaskDto(),
     var createError: Exception? = null,
     var updateError: Exception? = null,
+    var listError: Exception? = null,
 ) : TaskApiService {
 
     val putIds = mutableListOf<Int>()
     val deletedIds = mutableListOf<Int>()
 
-    override suspend fun listTasks(status: String?): List<TaskDto> = listResult
+    override suspend fun listTasks(status: String?): List<TaskDto> {
+        listError?.let { throw it }
+        return listResult
+    }
 
     override suspend fun getTask(id: Int): TaskDto = error("not used")
 
@@ -205,4 +209,22 @@ class SyncEngineTest {
             assertThat(tasks.getByServerId(100)).isNull()
             assertThat(tasks.getByServerId(200)?.title).isEqualTo("Y")
         }
+
+    @Test
+    fun offline_pullWithEmptyQueue_yieldsConnectivityRetry() = runTest(dispatcher) {
+        api.listError = IOException("airplane mode")
+
+        val outcome = engine.run()
+
+        assertThat(outcome).isEqualTo(SyncOutcome.CONNECTIVITY_RETRY)
+    }
+
+    @Test
+    fun nonConnectivity_pullFailure_staysSilentSuccess() = runTest(dispatcher) {
+        api.listError = httpException(502)
+
+        val outcome = engine.run()
+
+        assertThat(outcome).isEqualTo(SyncOutcome.SUCCESS)
+    }
 }

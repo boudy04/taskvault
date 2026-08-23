@@ -39,6 +39,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
@@ -125,6 +127,7 @@ private fun DrawerHeader(
             painter = painterResource(id = R.drawable.logo_no_fill),
             contentDescription =
             stringResource(id = R.string.tasks_header_image_content_description),
+            colorFilter = ColorFilter.tint(Color(0xFF16181F)),
             modifier = Modifier.width(dimensionResource(id = R.dimen.header_image_width))
         )
         Text(

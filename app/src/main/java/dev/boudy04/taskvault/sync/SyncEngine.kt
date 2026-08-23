@@ -31,8 +31,7 @@ class SyncEngine @Inject constructor(
         ops.resetRunningToPending()
         val drain = drain()
         if (drain != null) return@withContext drain
-        pull()
-        SyncOutcome.SUCCESS
+        if (pull()) SyncOutcome.SUCCESS else SyncOutcome.CONNECTIVITY_RETRY
     }
 
     /** Returns terminal outcome to bubble, or null when drain completed cleanly. */
@@ -95,11 +94,15 @@ class SyncEngine @Inject constructor(
         }
     }
 
-    private suspend fun pull() {
+    /** @return true when the server was reachable (regardless of what reconciled). */
+    private suspend fun pull(): Boolean {
         val remote = try {
             api.listTasks(null)
+        } catch (e: IOException) {
+            return false
         } catch (e: Exception) {
-            return
+            // non-connectivity failure (parse/5xx): skip reconcile without crying wolf
+            return true
         }
         val protected = ops.getAll().filter { it.state == PendingOpState.PENDING }.map { it.taskLocalId }.toSet()
         val remoteIds = remote.map { it.id }.toSet()
@@ -115,5 +118,6 @@ class SyncEngine @Inject constructor(
             val sid = row.serverId
             if (sid != null && sid !in remoteIds && row.id !in protected) tasks.deleteById(row.id)
         }
+        return true
     }
 }

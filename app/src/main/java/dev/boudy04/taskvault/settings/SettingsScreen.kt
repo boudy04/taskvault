@@ -16,8 +16,6 @@
 
 package dev.boudy04.taskvault.settings
 
-import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_WEAK
-import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
 import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -54,6 +52,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.boudy04.taskvault.R
 import dev.boudy04.taskvault.TodoTheme
 import dev.boudy04.taskvault.util.AddEditTaskTopAppBar
+import dev.boudy04.taskvault.util.allowedAuthenticatorsCompat
+import timber.log.Timber
 
 @Composable
 fun SettingsScreen(
@@ -139,7 +139,14 @@ private fun SettingsContent(
                 // never lock themselves out without a working authenticator.
                 onCheckedChange = { checked ->
                     if (checked) {
-                        (context as? FragmentActivity)?.verifyThen {
+                        val activity = context as? FragmentActivity
+                        if (activity != null) {
+                            activity.verifyThen {
+                                onAppLockChanged(true)
+                            }
+                        } else {
+                            // Never silently dead-end users on an unexpected host context.
+                            Timber.w("Host context is not a FragmentActivity; enabling App lock without verification")
                             onAppLockChanged(true)
                         }
                     } else {
@@ -175,7 +182,7 @@ private fun FragmentActivity.verifyThen(onSuccess: () -> Unit) {
     prompt.authenticate(
         BiometricPrompt.PromptInfo.Builder()
             .setTitle(getString(R.string.app_lock_verify))
-            .setAllowedAuthenticators(BIOMETRIC_WEAK or DEVICE_CREDENTIAL)
+            .setAllowedAuthenticators(allowedAuthenticatorsCompat())
             .build()
     )
 }

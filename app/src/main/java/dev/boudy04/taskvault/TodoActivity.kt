@@ -21,8 +21,6 @@ import android.os.Bundle
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_WEAK
-import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
 import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.background
@@ -51,7 +49,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.AndroidEntryPoint
+import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.boudy04.taskvault.settings.SettingsRepository
 import dev.boudy04.taskvault.settings.ThemeMode
 import dev.boudy04.taskvault.ui.theme.BackgroundDark
@@ -59,6 +62,10 @@ import dev.boudy04.taskvault.ui.theme.OnBackgroundDark
 import dev.boudy04.taskvault.ui.theme.PrimaryPillButton
 import dev.boudy04.taskvault.ui.theme.TaskVaultTheme
 import dev.boudy04.taskvault.ui.theme.resolvesDark
+import dev.boudy04.taskvault.util.allowedAuthenticatorsCompat
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -96,14 +103,11 @@ class TodoActivity : FragmentActivity() {
             }
             val scope = rememberCoroutineScope()
             TaskVaultTheme(themeMode = themeMode) {
-                // Cold-start-only gate: unlocked state lives in activity state, so it holds for
-                // the rest of the process lifetime once authentication succeeds.
-                var locked by remember { mutableStateOf<Boolean?>(null) }
-                LaunchedEffect(Unit) {
-                    locked = settingsRepository.appLock.first()
-                }
-                // null = still checking; render nothing so content never flashes and no
-                // prompt is launched before we know the lock is enabled.
+                val todoViewModel: TodoViewModel = hiltViewModel()
+                // Lock decision lives in the ViewModel: it survives configuration changes
+                // (rotation, uiMode) but dies with the process, so an authenticated unlock
+                // holds for the rest of the process lifetime exactly as specified.
+                val locked by todoViewModel.lockState.collectAsStateWithLifecycle()
                 when (locked) {
                     false -> TodoNavGraph(
                         themeMode = themeMode,
@@ -119,7 +123,7 @@ class TodoActivity : FragmentActivity() {
                             }
                         }
                     )
-                    true -> LockGate(onUnlocked = { locked = false })
+                    true -> LockGate(onUnlocked = todoViewModel::unlock)
                     null -> Unit
                 }
             }
@@ -152,7 +156,7 @@ private fun LockGate(onUnlocked: () -> Unit) {
         prompt.authenticate(
             BiometricPrompt.PromptInfo.Builder()
                 .setTitle(context.getString(R.string.unlock_title))
-                .setAllowedAuthenticators(BIOMETRIC_WEAK or DEVICE_CREDENTIAL)
+                .setAllowedAuthenticators(allowedAuthenticatorsCompat())
                 .build()
         )
     }
@@ -178,5 +182,31 @@ private fun LockGate(onUnlocked: () -> Unit) {
                 Text(stringResource(R.string.unlock_retry))
             }
         }
+    }
+}
+
+/**
+ * Holds the cold-start lock decision for [TodoActivity]. ViewModels survive configuration
+ * changes (rotation, uiMode) but die with the process, so an authenticated unlock holds for
+ * the rest of the process lifetime exactly as specified.
+ */
+@HiltViewModel
+class TodoViewModel @Inject constructor(
+    private val settingsRepository: SettingsRepository,
+) : ViewModel() {
+
+    /** null = still checking, true = gated, false = unlocked for this process. */
+    private val _lockState = MutableStateFlow<Boolean?>(null)
+    val lockState: StateFlow<Boolean?> = _lockState.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            // Read once per process; later changes to the setting only apply on next cold start.
+            _lockState.value = settingsRepository.appLock.first()
+        }
+    }
+
+    fun unlock() {
+        _lockState.value = false
     }
 }

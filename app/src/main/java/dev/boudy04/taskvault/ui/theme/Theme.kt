@@ -10,8 +10,10 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import dev.boudy04.taskvault.R
 import dev.boudy04.taskvault.settings.ThemeMode
@@ -44,10 +46,31 @@ fun ThemeMode.resolvesDark(systemDark: Boolean): Boolean = when (this) {
     ThemeMode.DARK -> true
 }
 
+// One variable TTF (wght 100-900, default instance = Thin). FontVariation.Settings
+// pins the axis per declared weight; without it every style renders Thin.
+// API < 26 ignores variation settings and falls back to the default instance.
+@OptIn(ExperimentalTextApi::class)
 private val Outfit = FontFamily(
-    Font(R.font.outfit_regular, FontWeight.Normal),
-    Font(R.font.outfit_medium, FontWeight.Medium),
-    Font(R.font.outfit_semibold, FontWeight.SemiBold),
+    Font(
+        R.font.outfit_regular,
+        FontWeight.Normal,
+        variationSettings = FontVariation.Settings(FontVariation.weight(400)),
+    ),
+    Font(
+        R.font.outfit_medium,
+        FontWeight.Medium,
+        variationSettings = FontVariation.Settings(FontVariation.weight(500)),
+    ),
+    Font(
+        R.font.outfit_semibold,
+        FontWeight.SemiBold,
+        variationSettings = FontVariation.Settings(FontVariation.weight(600)),
+    ),
+    Font(
+        R.font.outfit_semibold,
+        FontWeight.Bold,
+        variationSettings = FontVariation.Settings(FontVariation.weight(700)),
+    ),
 )
 
 private fun outfitTypography(): Typography {

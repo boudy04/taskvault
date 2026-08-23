@@ -42,4 +42,7 @@ data class LocalTask(
     var createdAt: String? = null,
     var updatedAt: String? = null,
     var dueAt: String? = null,
+
+    /** Comma-joined canonical (trim, lowercase, deduped) tag names. */
+    var tags: String = "",
 )

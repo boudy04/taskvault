@@ -2,6 +2,8 @@ package dev.boudy04.taskvault.data
 
 import dev.boudy04.taskvault.data.source.local.LocalTask
 import dev.boudy04.taskvault.data.source.network.TaskDto
+import dev.boudy04.taskvault.data.toDtoWithoutServerId
+import dev.boudy04.taskvault.data.joinTags
 import dev.boudy04.taskvault.data.source.network.toDto
 import dev.boudy04.taskvault.data.source.network.toLocal
 import dev.boudy04.taskvault.sync.TaskPayload
@@ -77,5 +79,36 @@ class TaskMappingExtTest {
             dueAt = "2026-08-24T09:00:00Z",
         )
         assertEquals("2026-08-24T09:00:00Z", payload.toDtoWithoutServerId().dueAt)
+    }
+
+    @Test
+    fun `tags round trip dto local external`() {
+        val dto = TaskDto(id = 5, title = "t", description = "d", tags = listOf("Work", "home"))
+        val local = dto.toLocal()
+        assertEquals("work,home", local.tags)
+        assertEquals(listOf("work", "home"), local.toExternal().tags)
+    }
+
+    @Test
+    fun `joinTags canonicalizes trim lowercase dedupe`() {
+        assertEquals("work,home", joinTags(listOf(" Work ", "HOME", "work", "")))
+    }
+
+    @Test
+    fun `copyFromDto threads tags both set and cleared`() {
+        val base = LocalTask(id = "l1", title = "old", description = "", isCompleted = false)
+        val tagged = base.copyFromDto(TaskDto(tags = listOf("Urgent")))
+        assertEquals("urgent", tagged.tags)
+        val cleared = tagged.copyFromDto(TaskDto())
+        assertEquals("", cleared.tags)
+    }
+
+    @Test
+    fun `payload tags flow into outgoing dto`() {
+        val payload = TaskPayload(
+            localId = "l1", title = "t", description = "",
+            status = "todo", priority = "high", tags = listOf("a", "b"),
+        )
+        assertEquals(listOf("a", "b"), payload.toDtoWithoutServerId().tags)
     }
 }

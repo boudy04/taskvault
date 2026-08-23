@@ -44,6 +44,7 @@ fun Task.toLocal() = LocalTask(
     it.status = status
     it.priority = priority
     it.dueAt = dueAt
+    it.tags = joinTags(tags)
 }
 
 fun List<Task>.toLocal() = map(Task::toLocal)
@@ -56,6 +57,7 @@ fun LocalTask.toExternal() = Task(
     status = if (isCompleted) TaskStatus.DONE else TaskStatus.TODO,
     priority = priority,
     dueAt = dueAt,
+    tags = parseTags(tags),
 )
 
 // Note: JvmName is used to provide a unique name for each extension function with the same name.
@@ -72,6 +74,7 @@ fun TaskPayload.toDtoWithoutServerId() = TaskDto(
     status = status,
     priority = priority,
     dueAt = dueAt,
+    tags = tags,
 )
 
 fun LocalTask.copyFromDto(dto: TaskDto) = copy(
@@ -83,4 +86,17 @@ fun LocalTask.copyFromDto(dto: TaskDto) = copy(
     createdAt = dto.createdAt,
     updatedAt = dto.updatedAt,
     dueAt = dto.dueAt,
+    tags = joinTags(dto.tags),
 )
+
+/** Canonicalizes tags (trim, lowercase, dedupe, drop empties) into the stored column form. */
+fun joinTags(tags: List<String>): String =
+    tags.map { it.trim().lowercase() }.filter { it.isNotEmpty() }.distinct().joinToString(",")
+
+/** Parses a comma-joined tag column back into its canonical list. */
+fun parseTags(column: String): List<String> =
+    if (column.isBlank()) {
+        emptyList()
+    } else {
+        column.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+    }

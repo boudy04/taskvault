@@ -37,6 +37,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -44,6 +45,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Icon
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.CloudOff
@@ -141,6 +144,11 @@ fun TasksScreen(
             onRefresh = viewModel::refresh,
             onTaskClick = onTaskClick,
             onTaskCheckedChange = viewModel::completeTask,
+            availableTags = uiState.availableTags,
+            selectedTag = uiState.selectedTag,
+            searchQuery = uiState.searchQuery,
+            onSearchQueryChanged = viewModel::setSearchQuery,
+            onSelectTag = viewModel::selectTag,
             modifier = Modifier.padding(paddingValues)
         )
 
@@ -175,6 +183,11 @@ private fun TasksContent(
     onRefresh: () -> Unit,
     onTaskClick: (Task) -> Unit,
     onTaskCheckedChange: (Task, Boolean) -> Unit,
+    availableTags: List<String>,
+    selectedTag: String?,
+    searchQuery: String,
+    onSearchQueryChanged: (String) -> Unit,
+    onSelectTag: (String?) -> Unit,
     modifier: Modifier = Modifier
 ) {
     LoadingContent(
@@ -188,6 +201,13 @@ private fun TasksContent(
                 .fillMaxSize()
                 .padding(horizontal = dimensionResource(id = R.dimen.horizontal_margin))
         ) {
+            SearchAndTagBar(
+                searchQuery = searchQuery,
+                onSearchQueryChanged = onSearchQueryChanged,
+                availableTags = availableTags,
+                selectedTag = selectedTag,
+                onSelectTag = onSelectTag,
+            )
             Text(
                 text = stringResource(currentFilteringLabel),
                 modifier = Modifier.padding(
@@ -214,6 +234,50 @@ private fun TasksContent(
     }
 }
 
+/**
+ * Compact search field + horizontal tag filter chips ("All" + one per distinct tag),
+ * shown below the top bar per the T19 brief. ANDs with the active/completed menu filter.
+ */
+@Composable
+private fun SearchAndTagBar(
+    searchQuery: String,
+    onSearchQueryChanged: (String) -> Unit,
+    availableTags: List<String>,
+    selectedTag: String?,
+    onSelectTag: (String?) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = onSearchQueryChanged,
+            placeholder = { Text(stringResource(R.string.search_hint)) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        if (availableTags.isNotEmpty()) {
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(top = 4.dp),
+            ) {
+                item {
+                    FilterChip(
+                        selected = selectedTag == null,
+                        onClick = { onSelectTag(null) },
+                        label = { Text(stringResource(R.string.tag_filter_all)) },
+                    )
+                }
+                items(availableTags) { tag ->
+                    FilterChip(
+                        selected = selectedTag == tag,
+                        onClick = { onSelectTag(if (selectedTag == tag) null else tag) },
+                        label = { Text(tag) },
+                    )
+                }
+            }
+        }
+    }
+}
 @Composable
 private fun TaskItem(
     task: Task,
@@ -393,6 +457,11 @@ private fun TasksContentPreview() {
                 onRefresh = { },
                 onTaskClick = { },
                 onTaskCheckedChange = { _, _ -> },
+                availableTags = listOf("home", "work"),
+                selectedTag = null,
+                searchQuery = "",
+                onSearchQueryChanged = { },
+                onSelectTag = { },
                 pendingSyncIds = setOf("ID 1")
             )
         }
@@ -413,6 +482,11 @@ private fun TasksContentEmptyPreview() {
                 onRefresh = { },
                 onTaskClick = { },
                 onTaskCheckedChange = { _, _ -> },
+                availableTags = emptyList(),
+                selectedTag = null,
+                searchQuery = "",
+                onSearchQueryChanged = { },
+                onSelectTag = { },
                 pendingSyncIds = emptySet()
             )
         }

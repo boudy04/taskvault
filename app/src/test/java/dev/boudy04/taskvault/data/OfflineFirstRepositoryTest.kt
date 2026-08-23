@@ -106,6 +106,29 @@ class OfflineFirstRepositoryTest {
     }
 
     @Test
+    fun createTask_withTags_storesCanonicalColumn_andPayloadCarriesTags() = runTest {
+        val repo = repoWithFakes()
+        val id = repo.createTask("Tagged", "body", TaskPriority.LOW, null, listOf(" Work ", "home", "WORK"))
+
+        assertEquals("work,home", fakeTaskDao.getById(id)!!.tags)
+        val payload = json.decodeFromString<TaskPayload>(fakePendingOps.getAll().single().payload)
+        assertEquals(listOf("work", "home"), payload.tags)
+    }
+
+    @Test
+    fun updateTask_withNewTags_replacesTagsInRowAndNextPayload() = runTest {
+        val repo = repoWithFakes()
+        val id = repo.createTask("t", "d", TaskPriority.MEDIUM)
+
+        repo.updateTask(id, "t2", "d2", TaskPriority.HIGH, null, listOf("urgent"))
+
+        assertEquals("urgent", fakeTaskDao.getById(id)!!.tags)
+        val lastOp = fakePendingOps.getAll().last()
+        val payload = json.decodeFromString<TaskPayload>(lastOp.payload)
+        assertEquals(listOf("urgent"), payload.tags)
+    }
+
+    @Test
     fun deleteTask_withServerId_enqueuesDelete_andDropsRowImmediately() = runTest {
         val seeded = LocalTask(
             id = "local-1",

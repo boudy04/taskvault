@@ -20,6 +20,9 @@ package dev.boudy04.taskvault.addedittask
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,10 +31,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.AlertDialog
@@ -42,6 +47,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.InputChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
@@ -68,6 +74,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -106,6 +115,8 @@ fun AddEditTaskScreen(
         val uiState by viewModel.uiState.collectAsStateWithLifecycle()
         val priority by viewModel.priority.collectAsStateWithLifecycle()
         val dueAt by viewModel.dueAt.collectAsStateWithLifecycle()
+        val tags by viewModel.tags.collectAsStateWithLifecycle()
+        val tagSuggestions by viewModel.tagSuggestions.collectAsStateWithLifecycle()
 
         AddEditTaskContent(
             loading = uiState.isLoading,
@@ -117,6 +128,10 @@ fun AddEditTaskScreen(
             onPriorityChanged = viewModel::updatePriority,
             dueAt = dueAt,
             onDueAtChanged = viewModel::updateDueAt,
+            tags = tags,
+            tagSuggestions = tagSuggestions.filter { it !in tags },
+            onTagAdded = viewModel::addTag,
+            onTagRemoved = viewModel::removeTag,
             modifier = Modifier.padding(paddingValues)
         )
 
@@ -149,6 +164,10 @@ private fun AddEditTaskContent(
     onDescriptionChanged: (String) -> Unit,
     dueAt: String?,
     onDueAtChanged: (String?) -> Unit,
+    tags: List<String>,
+    tagSuggestions: List<String>,
+    onTagAdded: (String) -> Unit,
+    onTagRemoved: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var isRefreshing by remember { mutableStateOf(false) }
@@ -199,9 +218,88 @@ private fun AddEditTaskContent(
             )
             PriorityPicker(priority = priority, onPriorityChanged = onPriorityChanged)
             DuePicker(dueAt = dueAt, onDueAtChanged = onDueAtChanged)
+            TagsSection(
+                selected = tags,
+                suggestions = tagSuggestions,
+                onAdd = onTagAdded,
+                onRemove = onTagRemoved,
+            )
         }
     }
 }
+
+/**
+ * Tag chip editor per the T19 brief: a horizontal FlowRow of selected chips (X removes) with
+ * a trailing input field; done/enter commits a chip. Below it, up to 8 existing distinct
+ * tags are offered as one-tap suggestion chips.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun TagsSection(
+    selected: List<String>,
+    suggestions: List<String>,
+    onAdd: (String) -> Unit,
+    onRemove: (String) -> Unit,
+) {
+    var input by remember { mutableStateOf("") }
+
+    Text(
+        text = stringResource(id = R.string.tags_label),
+        style = MaterialTheme.typography.titleMedium
+    )
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy((-2).dp),
+    ) {
+        selected.forEach { tag ->
+            InputChip(
+                selected = true,
+                onClick = { },
+                label = { Text(tag) },
+                trailingIcon = {
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = stringResource(id = R.string.cd_remove_tag),
+                        modifier = Modifier.clickable { onRemove(tag) },
+                    )
+                },
+            )
+        }
+        OutlinedTextField(
+            value = input,
+            onValueChange = { input = it },
+            placeholder = { Text(stringResource(id = R.string.tags_add_hint)) },
+            singleLine = true,
+            modifier = Modifier.width(140.dp),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(
+                onDone = {
+                    if (input.isNotBlank()) {
+                        onAdd(input)
+                    }
+                    input = ""
+                }
+            ),
+        )
+    }
+    if (suggestions.isNotEmpty()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            suggestions.take(MAX_TAG_SUGGESTIONS).forEach { tag ->
+                FilterChip(
+                    selected = false,
+                    onClick = { onAdd(tag) },
+                    label = { Text(tag) },
+                )
+            }
+        }
+    }
+}
+
+private const val MAX_TAG_SUGGESTIONS = 8
 
 /**
  * "Due" row + pick flow per R20: chips (Today / Tomorrow / Pick date…) then Material3

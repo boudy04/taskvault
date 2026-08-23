@@ -22,6 +22,8 @@ import dev.boudy04.taskvault.data.source.local.PendingOpEntity
 import dev.boudy04.taskvault.data.source.local.PendingOpType
 import dev.boudy04.taskvault.data.source.local.TaskDao
 import dev.boudy04.taskvault.data.source.network.toApi
+import dev.boudy04.taskvault.data.joinTags
+import dev.boudy04.taskvault.data.parseTags
 import dev.boudy04.taskvault.di.DefaultDispatcher
 import dev.boudy04.taskvault.sync.ReminderScheduler
 import dev.boudy04.taskvault.sync.SyncScheduler
@@ -56,6 +58,7 @@ class DefaultTaskRepository @Inject constructor(
         description: String,
         priority: TaskPriority,
         dueAt: String?,
+        tags: List<String>,
     ): String {
         // ID creation might be a complex operation so it's executed using the supplied
         // coroutine dispatcher
@@ -70,6 +73,7 @@ class DefaultTaskRepository @Inject constructor(
             status = TaskStatus.TODO,
             priority = priority,
             dueAt = dueAt,
+            tags = joinTags(tags),
         )
         localDataSource.upsert(task)
         enqueue(PendingOpType.CREATE, task)
@@ -83,9 +87,16 @@ class DefaultTaskRepository @Inject constructor(
         description: String,
         priority: TaskPriority,
         dueAt: String?,
+        tags: List<String>,
     ) {
         val task = localDataSource.getById(taskId) ?: throw Exception("Task ($taskId) not found")
-        val updated = task.copy(title = title, description = description, priority = priority, dueAt = dueAt)
+        val updated = task.copy(
+            title = title,
+            description = description,
+            priority = priority,
+            dueAt = dueAt,
+            tags = joinTags(tags),
+        )
         localDataSource.upsert(updated)
         enqueue(PendingOpType.UPDATE, updated)
         // dueAt replaces or clears wholesale, so drop any old alarm first
@@ -165,6 +176,10 @@ class DefaultTaskRepository @Inject constructor(
             SyncStats(total = rows.size, synced = rows.size - queued, queued = queued)
         }
 
+    override suspend fun getAllTags(): List<String> = withContext(dispatcher) {
+        localDataSource.getAllTagGroups().flatMap { parseTags(it) }.distinct()
+    }
+
     private suspend fun enqueue(type: PendingOpType, task: LocalTask) {
         val payload = TaskPayload(
             localId = task.id,
@@ -174,6 +189,7 @@ class DefaultTaskRepository @Inject constructor(
             priority = task.priority.toApi(),
             serverId = task.serverId,
             dueAt = task.dueAt,
+            tags = parseTags(task.tags),
         )
         pendingOps.insert(
             PendingOpEntity(taskLocalId = task.id, opType = type, payload = json.encodeToString(payload)),

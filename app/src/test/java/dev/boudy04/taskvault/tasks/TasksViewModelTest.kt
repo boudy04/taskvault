@@ -235,4 +235,54 @@ class TasksViewModelTest {
         // Then the unsynced id set is exposed through the ui state
         assertThat(tasksViewModel.uiState.first().pendingSyncIds).containsExactly("1")
     }
+
+    @Test
+    fun selectTag_narrowsList_andAllClearsIt() = runTest {
+        tasksRepository.addTasks(
+            Task(id = "10", title = "Work task", description = "", tags = listOf("work")),
+            Task(id = "11", title = "Home task", description = "", tags = listOf("home")),
+        )
+
+        tasksViewModel.selectTag("work")
+
+        val filtered = tasksViewModel.uiState.first().items
+        assertThat(filtered.map { it.id }).containsExactly("10")
+        assertThat(tasksViewModel.uiState.first().selectedTag).isEqualTo("work")
+        assertThat(tasksViewModel.uiState.first().availableTags).containsAtLeast("home", "work")
+
+        tasksViewModel.selectTag(null)
+        assertThat(tasksViewModel.uiState.first().selectedTag).isNull()
+        assertThat(tasksViewModel.uiState.first().items).hasSize(5)
+    }
+
+    @Test
+    fun setSearchQuery_matchesDescription() = runTest {
+        tasksViewModel.setSearchQuery("desc2")
+
+        val items = tasksViewModel.uiState.first().items
+        assertThat(items.map { it.id }).containsExactly("2")
+    }
+
+    @Test
+    fun setSearchQuery_matchesTag() = runTest {
+        tasksRepository.addTasks(Task(id = "20", title = "Plain", description = "", tags = listOf("someday")))
+
+        tasksViewModel.setSearchQuery("SOMEDAY")
+
+        assertThat(tasksViewModel.uiState.first().items.map { it.id }).containsExactly("20")
+    }
+
+    @Test
+    fun searchAndTagFilter_combineWithAnd() = runTest {
+        tasksRepository.addTasks(
+            Task(id = "30", title = "A work thing", description = "", tags = listOf("work")),
+            Task(id = "31", title = "Another", description = "", tags = listOf("work")),
+            Task(id = "32", title = "A home thing", description = "", tags = listOf("home")),
+        )
+
+        tasksViewModel.setSearchQuery("a work")
+        tasksViewModel.selectTag("work")
+
+        assertThat(tasksViewModel.uiState.first().items.map { it.id }).containsExactly("30")
+    }
 }

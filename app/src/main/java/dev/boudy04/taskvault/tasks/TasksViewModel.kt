@@ -35,6 +35,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -49,7 +50,10 @@ data class TasksUiState(
     val isLoading: Boolean = false,
     val filteringUiInfo: FilteringUiInfo = FilteringUiInfo(),
     val userMessage: Int? = null,
-    val pendingSyncIds: Set<String> = emptySet()
+    val pendingSyncIds: Set<String> = emptySet(),
+    val availableTags: List<String> = emptyList(),
+    val searchQuery: String = "",
+    val selectedTag: String? = null,
 )
 
 /**
@@ -67,17 +71,58 @@ class TasksViewModel @Inject constructor(
     private val _filterUiInfo = _savedFilterType.map { getFilterUiInfo(it) }.distinctUntilChanged()
     private val _userMessage: MutableStateFlow<Int?> = MutableStateFlow(null)
     private val _isLoading = MutableStateFlow(false)
+
+    /** Free-text search over title/description/tags (case-insensitive). */
+    private val _searchQuery = MutableStateFlow("")
+
+    /** Selected tag chip; null = "All". */
+    private val _selectedTag = MutableStateFlow<String?>(null)
+
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
+    }
+
+    fun selectTag(tag: String?) {
+        _selectedTag.value = tag
+    }
+
     private val _filteredTasksAsync =
-        combine(taskRepository.getTasksStream(), _savedFilterType) { tasks, type ->
+        combine(
+            taskRepository.getTasksStream(),
+            _savedFilterType,
+            _searchQuery,
+            _selectedTag,
+        ) { tasks, type, query, tag ->
             filterTasks(tasks, type)
+                .filter { matchesQuery(it, query) }
+                .filter { tag == null || tag in it.tags }
         }
             .map { Async.Success(it) }
             .catch<Async<List<Task>>> { emit(Async.Error(R.string.loading_tasks_error)) }
 
+    /** Everything the list screen needs besides the filtered items themselves. */
+    private data class ListExtras(
+        val pendingSyncIds: Set<String> = emptySet(),
+        val availableTags: List<String> = emptyList(),
+        val searchQuery: String = "",
+        val selectedTag: String? = null,
+    )
+
+    private val _extras: Flow<ListExtras> = combine(
+        taskRepository.getPendingSyncIdsStream(),
+        // Errors surface through the main list pipeline; the tag bar degrades silently.
+        taskRepository.getTasksStream()
+            .map { tasks -> tasks.flatMap { it.tags }.distinct().sorted() }
+            .catch { emit(emptyList()) },
+        _searchQuery,
+        _selectedTag,
+    ) { pending, tags, query, selected ->
+        ListExtras(pending, tags, query, selected)
+    }
+
     val uiState: StateFlow<TasksUiState> = combine(
-        _filterUiInfo, _isLoading, _userMessage, _filteredTasksAsync,
-        taskRepository.getPendingSyncIdsStream()
-    ) { filterUiInfo, isLoading, userMessage, tasksAsync, pendingSyncIds ->
+        _filterUiInfo, _isLoading, _userMessage, _filteredTasksAsync, _extras
+    ) { filterUiInfo, isLoading, userMessage, tasksAsync, extras ->
         when (tasksAsync) {
             Async.Loading -> {
                 TasksUiState(isLoading = true)
@@ -88,10 +133,13 @@ class TasksViewModel @Inject constructor(
             is Async.Success -> {
                 TasksUiState(
                     items = tasksAsync.data,
-                    pendingSyncIds = pendingSyncIds,
+                    pendingSyncIds = extras.pendingSyncIds,
                     filteringUiInfo = filterUiInfo,
                     isLoading = isLoading,
-                    userMessage = userMessage
+                    userMessage = userMessage,
+                    availableTags = extras.availableTags,
+                    searchQuery = extras.searchQuery,
+                    selectedTag = extras.selectedTag,
                 )
             }
         }
@@ -165,6 +213,14 @@ class TasksViewModel @Inject constructor(
         return tasksToShow
     }
 
+    /** Case-insensitive contains over title/description/tags; blank query matches all. */
+    private fun matchesQuery(task: Task, query: String): Boolean {
+        val q = query.trim()
+        if (q.isEmpty()) return true
+        return task.title.contains(q, ignoreCase = true) ||
+            task.description.contains(q, ignoreCase = true) ||
+            task.tags.any { it.contains(q, ignoreCase = true) }
+    }
     private fun getFilterUiInfo(requestType: TasksFilterType): FilteringUiInfo =
         when (requestType) {
             ALL_TASKS -> {

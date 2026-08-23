@@ -111,4 +111,8 @@ interface TaskDao {
     /** Rows carrying a due date; boot receiver re-arms reminders for these. */
     @Query("SELECT * FROM task WHERE dueAt IS NOT NULL")
     suspend fun getDueTasks(): List<LocalTask>
+
+    /** Distinct comma-joined tag groups; parse/dedupe via `parseTags`-style helpers. */
+    @Query("SELECT DISTINCT tags FROM task WHERE tags != ''")
+    suspend fun getAllTagGroups(): List<String>
 }

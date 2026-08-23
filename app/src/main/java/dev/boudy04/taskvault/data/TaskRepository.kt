@@ -40,6 +40,7 @@ interface TaskRepository {
         description: String,
         priority: TaskPriority = TaskPriority.MEDIUM,
         dueAt: String? = null,
+        tags: List<String> = emptyList(),
     ): String
 
     suspend fun updateTask(
@@ -48,6 +49,7 @@ interface TaskRepository {
         description: String,
         priority: TaskPriority = TaskPriority.MEDIUM,
         dueAt: String? = null,
+        tags: List<String> = emptyList(),
     )
 
     suspend fun completeTask(taskId: String)
@@ -64,5 +66,8 @@ interface TaskRepository {
     fun getPendingSyncIdsStream(): Flow<Set<String>>
 
     fun getSyncStatsStream(): Flow<SyncStats>
+
+    /** All distinct canonical tags across tasks (for the tag filter bar / suggestions). */
+    suspend fun getAllTags(): List<String>
 }
 

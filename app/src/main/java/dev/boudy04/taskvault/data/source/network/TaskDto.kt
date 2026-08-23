@@ -2,6 +2,8 @@ package dev.boudy04.taskvault.data.source.network
 
 import dev.boudy04.taskvault.data.TaskPriority
 import dev.boudy04.taskvault.data.TaskStatus
+import dev.boudy04.taskvault.data.joinTags
+import dev.boudy04.taskvault.data.parseTags
 import dev.boudy04.taskvault.data.source.local.LocalTask
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -17,6 +19,7 @@ data class TaskDto(
     @SerialName("created_at") val createdAt: String = "",
     @SerialName("updated_at") val updatedAt: String = "",
     @SerialName("due_at") val dueAt: String? = null,
+    @SerialName("tags") val tags: List<String> = emptyList(),
 )
 
 fun TaskStatus.toApi(): String = when (this) {
@@ -55,6 +58,7 @@ fun TaskDto.toLocal(): LocalTask = LocalTask(
     createdAt = createdAt,
     updatedAt = updatedAt,
     dueAt = dueAt,
+    tags = joinTags(tags),
 )
 
 fun LocalTask.toDto(): TaskDto = TaskDto(
@@ -64,4 +68,5 @@ fun LocalTask.toDto(): TaskDto = TaskDto(
     status = status.toApi(),
     priority = priority.toApi(),
     dueAt = dueAt,
+    tags = parseTags(tags),
 )

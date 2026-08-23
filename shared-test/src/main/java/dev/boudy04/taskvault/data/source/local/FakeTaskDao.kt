@@ -81,4 +81,7 @@ class FakeTaskDao(initialTasks: List<LocalTask>? = emptyList()) : TaskDao {
 
     override suspend fun getDueTasks(): List<LocalTask> =
         _tasks?.values?.filter { it.dueAt != null } ?: emptyList()
+
+    override suspend fun getAllTagGroups(): List<String> =
+        _tasks?.values?.map { it.tags }?.filter { it.isNotEmpty() }?.distinct() ?: emptyList()
 }

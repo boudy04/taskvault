@@ -67,10 +67,36 @@ class AddEditTaskViewModel @Inject constructor(
     private val _dueAt = MutableStateFlow<String?>(null)
     val dueAt: StateFlow<String?> = _dueAt.asStateFlow()
 
+    /** Canonical (trim/lowercase) selected tags for the chip editor. */
+    private val _tags = MutableStateFlow<List<String>>(emptyList())
+    val tags: StateFlow<List<String>> = _tags.asStateFlow()
+
+    /** Up to 8 existing distinct tags from all tasks; drives the suggestion chips. */
+    private val _tagSuggestions = MutableStateFlow<List<String>>(emptyList())
+    val tagSuggestions: StateFlow<List<String>> = _tagSuggestions.asStateFlow()
+
     init {
         if (taskId != null) {
             loadTask(taskId)
         }
+        viewModelScope.launch {
+            _tagSuggestions.value = taskRepository.getAllTags().take(MAX_SUGGESTED_TAGS)
+        }
+    }
+
+    /** Commits a chip from raw input: trim + lowercase, drop empties/dupes. */
+    fun addTag(raw: String) {
+        val tag = raw.trim().lowercase()
+        if (tag.isEmpty()) return
+        _tags.value = (_tags.value + tag).distinct()
+    }
+
+    fun removeTag(tag: String) {
+        _tags.value = _tags.value - tag
+    }
+
+    private companion object {
+        const val MAX_SUGGESTED_TAGS = 8
     }
 
     // Called when clicking on fab.
@@ -116,7 +142,13 @@ class AddEditTaskViewModel @Inject constructor(
     }
 
     private fun createNewTask() = viewModelScope.launch {
-        taskRepository.createTask(uiState.value.title, uiState.value.description, _priority.value, _dueAt.value)
+        taskRepository.createTask(
+            uiState.value.title,
+            uiState.value.description,
+            _priority.value,
+            _dueAt.value,
+            _tags.value,
+        )
         _uiState.update {
             it.copy(isTaskSaved = true)
         }
@@ -133,6 +165,7 @@ class AddEditTaskViewModel @Inject constructor(
                 description = uiState.value.description,
                 priority = _priority.value,
                 dueAt = _dueAt.value,
+                tags = _tags.value,
             )
             _uiState.update {
                 it.copy(isTaskSaved = true)
@@ -149,6 +182,7 @@ class AddEditTaskViewModel @Inject constructor(
                 if (task != null) {
                     _priority.value = task.priority
                     _dueAt.value = task.dueAt
+                    _tags.value = task.tags
                     _uiState.update {
                         it.copy(
                             title = task.title,

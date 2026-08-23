@@ -102,6 +102,13 @@
     <string name="logged_in_as">Logged in as %1$s</string>
     <string name="logout">Log out</string>
 
+    <!-- Tags & search -->
+    <string name="tags_label">Tags</string>
+    <string name="tags_add_hint">Add tag</string>
+    <string name="cd_remove_tag">Remove tag</string>
+    <string name="search_hint">Search tasks</string>
+    <string name="tag_filter_all">All</string>
+
     <!-- Font -->
     <string name="font_section_title">Font</string>
     <string name="font_family_taskvault">TaskVault (serif)</string>

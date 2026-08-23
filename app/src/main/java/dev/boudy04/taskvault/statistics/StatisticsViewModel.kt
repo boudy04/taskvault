@@ -20,11 +20,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.boudy04.taskvault.R
 import dev.boudy04.taskvault.data.Task
+import dev.boudy04.taskvault.data.SyncStats
 import dev.boudy04.taskvault.data.TaskRepository
 import dev.boudy04.taskvault.util.Async
 import dev.boudy04.taskvault.util.WhileUiSubscribed
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -38,7 +40,10 @@ data class StatisticsUiState(
     val isEmpty: Boolean = false,
     val isLoading: Boolean = false,
     val activeTasksPercent: Float = 0f,
-    val completedTasksPercent: Float = 0f
+    val completedTasksPercent: Float = 0f,
+    val syncTotal: Int = 0,
+    val syncSynced: Int = 0,
+    val syncQueued: Int = 0,
 )
 
 /**
@@ -50,10 +55,14 @@ class StatisticsViewModel @Inject constructor(
 ) : ViewModel() {
 
     val uiState: StateFlow<StatisticsUiState> =
-        taskRepository.getTasksStream()
-            .map { Async.Success(it) }
-            .catch<Async<List<Task>>> { emit(Async.Error(R.string.loading_tasks_error)) }
-            .map { taskAsync -> produceStatisticsUiState(taskAsync) }
+        combine(
+            taskRepository.getTasksStream()
+                .map { Async.Success(it) }
+                .catch<Async<List<Task>>> { emit(Async.Error(R.string.loading_tasks_error)) },
+            taskRepository.getSyncStatsStream(),
+        ) { taskAsync, syncStats ->
+            produceStatisticsUiState(taskAsync, syncStats)
+        }
             .stateIn(
                 scope = viewModelScope,
                 started = WhileUiSubscribed,
@@ -66,7 +75,7 @@ class StatisticsViewModel @Inject constructor(
         }
     }
 
-    private fun produceStatisticsUiState(taskLoad: Async<List<Task>>) =
+    private fun produceStatisticsUiState(taskLoad: Async<List<Task>>, syncStats: SyncStats) =
         when (taskLoad) {
             Async.Loading -> {
                 StatisticsUiState(isLoading = true, isEmpty = true)
@@ -81,8 +90,12 @@ class StatisticsViewModel @Inject constructor(
                     isEmpty = taskLoad.data.isEmpty(),
                     activeTasksPercent = stats.activeTasksPercent,
                     completedTasksPercent = stats.completedTasksPercent,
-                    isLoading = false
+                    isLoading = false,
+                    syncTotal = syncStats.total,
+                    syncSynced = syncStats.synced,
+                    syncQueued = syncStats.queued,
                 )
             }
         }
 }
+

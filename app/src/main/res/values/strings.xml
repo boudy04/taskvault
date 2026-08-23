@@ -109,4 +109,8 @@
     <string name="widget_open_count" translatable="false">%1$d open</string>
     <string name="widget_no_active_tasks">No active tasks</string>
 
-</resources>
+    <string name="statistics_sync_header">Sync status</string>
+    <string name="statistics_sync_detail">%1$d%% synced &#8226; %2$d of %3$d tasks online &#8226; %4$d waiting to upload</string>
+    <string name="cd_sync_pending">Waiting to sync</string>
+    <string name="cd_sync_synced">Synced</string></resources>
+

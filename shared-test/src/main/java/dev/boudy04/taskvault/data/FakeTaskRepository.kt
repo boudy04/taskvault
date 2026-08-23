@@ -116,6 +116,8 @@ class FakeTaskRepository : TaskRepository {
         _pendingSyncIds.value = ids
     }
 
+    override fun getSyncStatsStream(): Flow<SyncStats> = MutableStateFlow(SyncStats(0, 0, 0))
+
     override fun getPendingSyncIdsStream(): Flow<Set<String>> = _pendingSyncIds.asStateFlow()
 
     private fun saveTask(task: Task) {
@@ -173,3 +175,4 @@ class FakeTaskRepository : TaskRepository {
         }
     }
 }
+

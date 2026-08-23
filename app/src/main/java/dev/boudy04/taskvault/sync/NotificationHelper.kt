@@ -10,6 +10,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.boudy04.taskvault.R
+import dev.boudy04.taskvault.data.source.local.PendingOpDao
 import dev.boudy04.taskvault.TodoActivity
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -22,17 +23,20 @@ import javax.inject.Singleton
 @Singleton
 class NotificationHelper @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val pendingOps: PendingOpDao,
 ) {
     // ponytail: string-lookup getSystemService works on all APIs; Class variant needs 23
     private val manager =
         context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-    fun showConnectivityFailure(baseUrl: String) {
+    suspend fun showConnectivityFailure(baseUrl: String) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N ||
             !manager.areNotificationsEnabled()
         ) {
             return
         }
+        // Offline with an empty queue is not an error: everything is already saved/synced.
+        if (pendingOps.countPending() == 0) return
         ensureChannel()
         val pending = PendingIntent.getActivity(
             context,
@@ -105,4 +109,6 @@ class NotificationHelper @Inject constructor(
         const val REMINDERS_CHANNEL_ID = "reminders"
     }
 }
+
+
 

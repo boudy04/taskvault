@@ -45,6 +45,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
+import androidx.compose.material.icons.filled.CloudDone
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.platform.LocalContext
@@ -271,13 +273,21 @@ private fun TaskItem(
             }
         }
         if (isUnsynced) {
-            val dotLabel = stringResource(R.string.cd_unsynced_dot)
-            Box(
+            Icon(
+                Icons.Filled.CloudOff,
+                contentDescription = stringResource(R.string.cd_sync_pending),
+                tint = Color(0xFFFFB300),
                 modifier = Modifier
                     .padding(start = 8.dp)
-                    .size(8.dp)
-                    .background(Color(0xFFFFB300), CircleShape)
-                    .semantics { contentDescription = dotLabel }
+                    .size(16.dp)
+                    .semantics { contentDescription = "Waiting to sync" }
+            )
+        } else {
+            Icon(
+                Icons.Filled.CloudDone,
+                contentDescription = stringResource(R.string.cd_sync_synced),
+                tint = Color(0xFF38693C).copy(alpha = 0.7f),
+                modifier = Modifier.padding(start = 8.dp).size(16.dp)
             )
         }
     }

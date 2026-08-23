@@ -32,6 +32,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -156,6 +157,13 @@ class DefaultTaskRepository @Inject constructor(
 
     override fun getPendingSyncIdsStream(): Flow<Set<String>> =
         pendingOps.observePendingTaskIds().map { it.toSet() }
+
+    override fun getSyncStatsStream(): Flow<SyncStats> =
+        combine(localDataSource.observeAll(), pendingOps.observePendingTaskIds()) { rows, pendingIds ->
+            val pending = pendingIds.toSet()
+            val queued = rows.count { it.id in pending }
+            SyncStats(total = rows.size, synced = rows.size - queued, queued = queued)
+        }
 
     private suspend fun enqueue(type: PendingOpType, task: LocalTask) {
         val payload = TaskPayload(

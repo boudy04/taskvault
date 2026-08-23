@@ -59,6 +59,9 @@ fun StatisticsScreen(
             empty = uiState.isEmpty,
             activeTasksPercent = uiState.activeTasksPercent,
             completedTasksPercent = uiState.completedTasksPercent,
+            syncTotal = uiState.syncTotal,
+            syncSynced = uiState.syncSynced,
+            syncQueued = uiState.syncQueued,
             onRefresh = { viewModel.refresh() },
             modifier = modifier.padding(paddingValues)
         )
@@ -71,6 +74,9 @@ private fun StatisticsContent(
     empty: Boolean,
     activeTasksPercent: Float,
     completedTasksPercent: Float,
+    syncTotal: Int,
+    syncSynced: Int,
+    syncQueued: Int,
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -103,6 +109,16 @@ private fun StatisticsContent(
                         completedTasksPercent
                     )
                 )
+                Text(stringResource(id = R.string.statistics_sync_header))
+                Text(
+                    stringResource(
+                        id = R.string.statistics_sync_detail,
+                        if (syncTotal == 0) 100 else (syncSynced * 100) / syncTotal,
+                        syncSynced,
+                        syncTotal,
+                        syncQueued
+                    )
+                )
             }
         }
     }
@@ -117,6 +133,9 @@ fun StatisticsContentPreview() {
             empty = false,
             activeTasksPercent = 80f,
             completedTasksPercent = 20f,
+            syncTotal = 10,
+            syncSynced = 8,
+            syncQueued = 2,
             onRefresh = { }
         )
     }
@@ -129,3 +148,5 @@ fun StatisticsContentEmptyPreview() {
         StatisticsScreen({})
     }
 }
+
+

@@ -62,4 +62,7 @@ interface TaskRepository {
 
     /** Local ids of tasks with queued pending ops; drives offline badges in the UI. */
     fun getPendingSyncIdsStream(): Flow<Set<String>>
+
+    fun getSyncStatsStream(): Flow<SyncStats>
 }
+

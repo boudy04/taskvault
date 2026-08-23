@@ -16,11 +16,10 @@
 
 package dev.boudy04.taskvault.util
 
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.google.accompanist.swiperefresh.SwipeRefresh
-import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
-
 
 /**
  * Display an initial empty state or swipe to refresh content.
@@ -32,6 +31,7 @@ import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
  * @param modifier the modifier to apply to this layout.
  * @param content (slot) the main content to show
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoadingContent(
     loading: Boolean,
@@ -44,11 +44,11 @@ fun LoadingContent(
     if (empty) {
         emptyContent()
     } else {
-        SwipeRefresh(
-            state = rememberSwipeRefreshState(loading),
+        PullToRefreshBox(
+            isRefreshing = loading,
             onRefresh = onRefresh,
             modifier = modifier,
-            content = content,
+            content = { content() },
         )
     }
 }

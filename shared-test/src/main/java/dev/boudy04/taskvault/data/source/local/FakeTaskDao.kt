@@ -48,10 +48,6 @@ class FakeTaskDao(initialTasks: List<LocalTask>? = emptyList()) : TaskDao {
         _tasks?.get(taskId)?.let { it.isCompleted = completed }
     }
 
-    override suspend fun deleteAll() {
-        _tasks?.clear()
-    }
-
     override suspend fun deleteById(taskId: String): Int {
         return if (_tasks?.remove(taskId) == null) {
             0
@@ -85,13 +81,4 @@ class FakeTaskDao(initialTasks: List<LocalTask>? = emptyList()) : TaskDao {
 
     override suspend fun getDueTasks(): List<LocalTask> =
         _tasks?.values?.filter { it.dueAt != null } ?: emptyList()
-
-    override suspend fun deleteUnsyncedOrphans(): Int {
-        _tasks?.apply {
-            val originalSize = size
-            entries.removeAll { it.value.serverId == null }
-            return originalSize - size
-        }
-        return 0
-    }
 }

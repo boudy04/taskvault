@@ -95,12 +95,6 @@ interface TaskDao {
     suspend fun deleteById(taskId: String): Int
 
     /**
-     * Delete all tasks.
-     */
-    @Query("DELETE FROM task")
-    suspend fun deleteAll()
-
-    /**
      * Delete all completed tasks from the table.
      *
      * @return the number of tasks deleted.
@@ -117,7 +111,4 @@ interface TaskDao {
     /** Rows carrying a due date; boot receiver re-arms reminders for these. */
     @Query("SELECT * FROM task WHERE dueAt IS NOT NULL")
     suspend fun getDueTasks(): List<LocalTask>
-
-    @Query("DELETE FROM task WHERE serverId IS NULL AND id NOT IN (SELECT DISTINCT taskLocalId FROM pending_ops)")
-    suspend fun deleteUnsyncedOrphans(): Int
 }

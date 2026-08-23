@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright 2019 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -44,6 +44,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.minutes
 
 /**
  * Integration test for the Add Task screen.

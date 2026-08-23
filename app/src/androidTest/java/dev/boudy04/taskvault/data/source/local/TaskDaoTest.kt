@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright 2019 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,6 +27,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import kotlin.time.Duration.Companion.minutes
 
 @ExperimentalCoroutinesApi
 @RunWith(AndroidJUnit4::class)
@@ -181,26 +182,6 @@ class TaskDaoTest {
 
         // When deleting a task by id
         database.taskDao().deleteById(task.id)
-
-        // THEN - The list is empty
-        val tasks = database.taskDao().getAll()
-        assertEquals(true, tasks.isEmpty())
-    }
-
-    @Test
-    fun deleteTasksAndGettingTasks() = runTest(timeout = 5.minutes) {
-        // Given a task inserted
-        database.taskDao().upsert(
-            LocalTask(
-                title = "title",
-                description = "description",
-                id = "id",
-                isCompleted = false,
-            )
-        )
-
-        // When deleting all tasks
-        database.taskDao().deleteAll()
 
         // THEN - The list is empty
         val tasks = database.taskDao().getAll()

@@ -27,6 +27,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.BrightnessAuto
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Settings
@@ -50,6 +53,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import dev.boudy04.taskvault.R
 import dev.boudy04.taskvault.TodoTheme
+import dev.boudy04.taskvault.settings.ThemeMode
 
 @Composable
 fun TasksTopAppBar(
@@ -59,7 +63,9 @@ fun TasksTopAppBar(
     onFilterCompletedTasks: () -> Unit,
     onClearCompletedTasks: () -> Unit,
     onRefresh: () -> Unit,
-    onSettingsClick: () -> Unit
+    onSettingsClick: () -> Unit,
+    themeMode: ThemeMode = ThemeMode.SYSTEM,
+    onToggleTheme: () -> Unit = {}
 ) {
     TopAppBar(
         title = { Text(text = stringResource(id = R.string.app_name)) },
@@ -71,6 +77,16 @@ fun TasksTopAppBar(
         actions = {
             FilterTasksMenu(onFilterAllTasks, onFilterActiveTasks, onFilterCompletedTasks)
             MoreTasksMenu(onClearCompletedTasks, onRefresh)
+            IconButton(onClick = onToggleTheme) {
+                Icon(
+                    imageVector = when (themeMode) {
+                        ThemeMode.DARK -> Icons.Filled.DarkMode
+                        ThemeMode.LIGHT -> Icons.Filled.LightMode
+                        ThemeMode.SYSTEM -> Icons.Filled.BrightnessAuto
+                    },
+                    contentDescription = stringResource(id = R.string.cd_theme_toggle)
+                )
+            }
             IconButton(onClick = onSettingsClick) {
                 Icon(Icons.Filled.Settings, stringResource(id = R.string.cd_settings))
             }

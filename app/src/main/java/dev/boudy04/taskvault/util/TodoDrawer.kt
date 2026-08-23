@@ -17,6 +17,7 @@
 package dev.boudy04.taskvault.util
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -116,7 +117,7 @@ private fun DrawerHeader(
         verticalArrangement = Arrangement.Center,
         modifier = modifier
             .fillMaxWidth()
-            .background(primaryDarkColor)
+            .background(MaterialTheme.colorScheme.primary)
             .height(dimensionResource(id = R.dimen.header_height))
             .padding(dimensionResource(id = R.dimen.header_padding))
     ) {
@@ -128,7 +129,7 @@ private fun DrawerHeader(
         )
         Text(
             text = stringResource(id = R.string.navigation_view_header_title),
-            color = MaterialTheme.colorScheme.surface
+            color = MaterialTheme.colorScheme.onPrimary
         )
     }
 }
@@ -149,6 +150,7 @@ private fun DrawerButton(
 
     TextButton(
         onClick = action,
+        shape = CircleShape,
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = dimensionResource(id = R.dimen.horizontal_margin))

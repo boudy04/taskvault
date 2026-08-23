@@ -65,7 +65,11 @@ fun TaskDetailScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = { TaskDetailTopAppBar(onBack = onBack, onDelete = viewModel::deleteTask) },
         floatingActionButton = {
-            SmallFloatingActionButton(onClick = { onEditTask(viewModel.taskId) }) {
+            SmallFloatingActionButton(
+                onClick = { onEditTask(viewModel.taskId) },
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            ) {
                 Icon(Icons.Filled.Edit, stringResource(id = R.string.edit_task))
             }
         }
@@ -130,9 +134,7 @@ private fun EditTaskContent(
         Column(commonModifier.verticalScroll(rememberScrollState())) {
             Row(
                 Modifier
-                    .fillMaxWidth()
-                    .then(screenPadding),
-
+                    .fillMaxWidth(),
             ) {
                 if (task != null) {
                     Checkbox(task.isCompleted, onTaskCheck)

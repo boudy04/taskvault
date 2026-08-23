@@ -38,6 +38,7 @@ import dev.boudy04.taskvault.TodoDestinationsArgs.USER_MESSAGE_ARG
 import dev.boudy04.taskvault.addedittask.AddEditTaskScreen
 import dev.boudy04.taskvault.statistics.StatisticsScreen
 import dev.boudy04.taskvault.settings.SettingsScreen
+import dev.boudy04.taskvault.settings.ThemeMode
 import dev.boudy04.taskvault.taskdetail.TaskDetailScreen
 import dev.boudy04.taskvault.tasks.TasksScreen
 import dev.boudy04.taskvault.util.AppModalDrawer
@@ -47,6 +48,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun TodoNavGraph(
     modifier: Modifier = Modifier,
+    themeMode: ThemeMode = ThemeMode.SYSTEM,
+    onCycleTheme: () -> Unit = {},
     navController: NavHostController = rememberNavController(),
     coroutineScope: CoroutineScope = rememberCoroutineScope(),
     drawerState: DrawerState = rememberDrawerState(initialValue = DrawerValue.Closed),
@@ -76,7 +79,9 @@ fun TodoNavGraph(
                     onAddTask = { navActions.navigateToAddEditTask(R.string.add_task, null) },
                     onTaskClick = { task -> navActions.navigateToTaskDetail(task.id) },
                     openDrawer = { coroutineScope.launch { drawerState.open() } },
-                    onSettingsClick = navActions::navigateToSettings
+                    onSettingsClick = navActions::navigateToSettings,
+                    themeMode = themeMode,
+                    onCycleTheme = onCycleTheme
                 )
             }
         }

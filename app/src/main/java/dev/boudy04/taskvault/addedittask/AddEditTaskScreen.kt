@@ -20,6 +20,7 @@ package dev.boudy04.taskvault.addedittask
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -76,7 +77,11 @@ fun AddEditTaskScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = { AddEditTaskTopAppBar(topBarTitle, onBack) },
         floatingActionButton = {
-            SmallFloatingActionButton(onClick = viewModel::saveTask) {
+            SmallFloatingActionButton(
+                onClick = viewModel::saveTask,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            ) {
                 Icon(Icons.Filled.Done, stringResource(id = R.string.cd_save_task))
             }
         }
@@ -138,7 +143,8 @@ private fun AddEditTaskContent(
             modifier
                 .fillMaxWidth()
                 .padding(all = dimensionResource(id = R.dimen.horizontal_margin))
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             val textFieldColors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = Color.Transparent,

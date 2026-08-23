@@ -35,4 +35,12 @@ class DataStoreSettingsRepositoryTest {
         assertEquals("abc", r.config.first().token)
         assertEquals("http://10.0.2.2:8000", r.config.first().baseUrl)
     }
+
+    @Test
+    fun themeMode_persists() = runTest {
+        val r = repo(backgroundScope)
+        assertEquals(ThemeMode.SYSTEM, r.themeMode.first())
+        r.setThemeMode(ThemeMode.DARK)
+        assertEquals(ThemeMode.DARK, r.themeMode.first())
+    }
 }

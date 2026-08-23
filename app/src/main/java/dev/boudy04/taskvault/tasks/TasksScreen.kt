@@ -19,6 +19,7 @@ package dev.boudy04.taskvault.tasks
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -65,6 +66,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.boudy04.taskvault.R
 import dev.boudy04.taskvault.TodoTheme
+import dev.boudy04.taskvault.settings.ThemeMode
 import dev.boudy04.taskvault.data.Task
 import dev.boudy04.taskvault.data.TaskStatus
 import dev.boudy04.taskvault.data.TaskPriority
@@ -82,6 +84,8 @@ fun TasksScreen(
     onUserMessageDisplayed: () -> Unit,
     openDrawer: () -> Unit,
     onSettingsClick: () -> Unit = {},
+    themeMode: ThemeMode = ThemeMode.SYSTEM,
+    onCycleTheme: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: TasksViewModel = hiltViewModel(),
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() }
@@ -97,11 +101,17 @@ fun TasksScreen(
                 onFilterCompletedTasks = { viewModel.setFiltering(COMPLETED_TASKS) },
                 onClearCompletedTasks = { viewModel.clearCompletedTasks() },
                 onRefresh = { viewModel.refresh() },
-                onSettingsClick = onSettingsClick
+                onSettingsClick = onSettingsClick,
+                themeMode = themeMode,
+                onToggleTheme = onCycleTheme
             )
         },
         floatingActionButton = {
-            SmallFloatingActionButton(onClick = onAddTask) {
+            SmallFloatingActionButton(
+                onClick = onAddTask,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            ) {
                 Icon(Icons.Filled.Add, stringResource(id = R.string.add_task))
             }
         }
@@ -194,16 +204,24 @@ private fun TaskItem(
     onCheckedChange: (Boolean) -> Unit,
     onTaskClick: (Task) -> Unit
 ) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(
-                horizontal = dimensionResource(id = R.dimen.horizontal_margin),
-                vertical = dimensionResource(id = R.dimen.list_item_padding),
-            )
-            .clickable { onTaskClick(task) }
+            .padding(vertical = 4.dp),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
     ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    horizontal = 12.dp,
+                    vertical = 12.dp,
+                )
+                .clickable { onTaskClick(task) }
+        ) {
         Checkbox(
             checked = task.isCompleted,
             onCheckedChange = onCheckedChange
@@ -231,6 +249,7 @@ private fun TaskItem(
                     .semantics { contentDescription = dotLabel }
             )
         }
+    }
     }
 }
 

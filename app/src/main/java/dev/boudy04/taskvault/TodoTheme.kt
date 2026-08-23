@@ -1,19 +1,11 @@
 package dev.boudy04.taskvault
 
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
+import dev.boudy04.taskvault.settings.ThemeMode
+import dev.boudy04.taskvault.ui.theme.TaskVaultTheme
 
+// Retained for previews and tests; production entry point is TaskVaultTheme.
 @Composable
 fun TodoTheme(content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = lightColorScheme(
-            primary = Color(0xFF263238),
-            secondary = Color(0xFF2E7D32),
-            tertiary = Color(0xFFCCCCCC),
-        )
-    ) {
-        content()
-    }
+    TaskVaultTheme(themeMode = ThemeMode.SYSTEM, content = content)
 }

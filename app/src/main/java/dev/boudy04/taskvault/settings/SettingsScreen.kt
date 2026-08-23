@@ -24,8 +24,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.OutlinedButton
+import dev.boudy04.taskvault.ui.theme.PrimaryPillButton
+import dev.boudy04.taskvault.ui.theme.QuietPillButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -39,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.boudy04.taskvault.R
@@ -93,7 +94,7 @@ private fun SettingsContent(
             .fillMaxSize()
             .padding(all = dimensionResource(id = R.dimen.horizontal_margin))
             .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(dimensionResource(id = R.dimen.list_item_padding))
+        verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
         OutlinedTextField(
             value = baseUrl,
@@ -110,12 +111,13 @@ private fun SettingsContent(
             modifier = Modifier.fillMaxWidth()
         )
         Row(
+            modifier = Modifier.padding(top = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(dimensionResource(id = R.dimen.list_item_padding))
         ) {
-            Button(onClick = onSave) {
+            PrimaryPillButton(onClick = onSave) {
                 Text(stringResource(id = R.string.settings_save))
             }
-            OutlinedButton(onClick = onTestConnection) {
+            QuietPillButton(onClick = onTestConnection) {
                 Text(stringResource(id = R.string.settings_test_connection))
             }
         }

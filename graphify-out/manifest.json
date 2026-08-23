@@ -1,9 +1,9 @@
 {
   "app/build.gradle.kts": {
-    "mtime": 1787428564.2832575,
-    "seen": 1787449700.7813854,
-    "ast_hash": "e167f661a37a9b6afe8a10595c02cc83",
-    "semantic_hash": "e167f661a37a9b6afe8a10595c02cc83"
+    "mtime": 1787451168.9160457,
+    "seen": 1787475434.8140445,
+    "ast_hash": "2f663d184d302711cdec4945b19f8fc3",
+    "semantic_hash": "2f663d184d302711cdec4945b19f8fc3"
   },
   "app/src/androidTest/java/dev/boudy04/taskvault/addedittask/AddEditTaskScreenTest.kt": {
     "mtime": 1787444086.5750978,
@@ -60,16 +60,16 @@
     "semantic_hash": "6d88c7634a0e61651d43a854f7556a75"
   },
   "app/src/main/java/dev/boudy04/taskvault/TaskVaultApplication.kt": {
-    "mtime": 1787425051.2509694,
-    "seen": 1787449700.7813854,
-    "ast_hash": "5be76505675a6660a70339fc64046eca",
-    "semantic_hash": "5be76505675a6660a70339fc64046eca"
+    "mtime": 1787451676.5556717,
+    "seen": 1787475434.8180676,
+    "ast_hash": "8143a03297c319f19d09cdfb428fee6d",
+    "semantic_hash": "8143a03297c319f19d09cdfb428fee6d"
   },
   "app/src/main/java/dev/boudy04/taskvault/TodoActivity.kt": {
-    "mtime": 1787446355.8512912,
-    "seen": 1787449700.7813854,
-    "ast_hash": "2e390a846f6a2c2df170843536f8bc51",
-    "semantic_hash": "2e390a846f6a2c2df170843536f8bc51"
+    "mtime": 1787455268.939075,
+    "seen": 1787475434.8180676,
+    "ast_hash": "05a54af6319c8adae1d020a210d5a83e",
+    "semantic_hash": "05a54af6319c8adae1d020a210d5a83e"
   },
   "app/src/main/java/dev/boudy04/taskvault/TodoNavGraph.kt": {
     "mtime": 1787446443.1203964,
@@ -150,10 +150,10 @@
     "semantic_hash": "276dc133650f8947436578ee4a3f102d"
   },
   "app/src/main/java/dev/boudy04/taskvault/data/source/local/PendingOpDao.kt": {
-    "mtime": 1787427025.980754,
-    "seen": 1787449700.7813854,
-    "ast_hash": "32f0d0bb1a29d9178694fdaf539d1450",
-    "semantic_hash": "32f0d0bb1a29d9178694fdaf539d1450"
+    "mtime": 1787460252.8057542,
+    "seen": 1787475434.8254619,
+    "ast_hash": "809c6ad664aa2de1a85534a0643dcb04",
+    "semantic_hash": "809c6ad664aa2de1a85534a0643dcb04"
   },
   "app/src/main/java/dev/boudy04/taskvault/data/source/local/PendingOpEntity.kt": {
     "mtime": 1787427021.856464,
@@ -222,22 +222,22 @@
     "semantic_hash": "f0bae7ef8797a32414364bcee5b51a7a"
   },
   "app/src/main/java/dev/boudy04/taskvault/settings/SettingsRepository.kt": {
-    "mtime": 1787446316.7352762,
-    "seen": 1787449700.7813854,
-    "ast_hash": "470209f85562d311eaf0ee6c194b8092",
-    "semantic_hash": "470209f85562d311eaf0ee6c194b8092"
+    "mtime": 1787451222.6340616,
+    "seen": 1787475434.8304868,
+    "ast_hash": "a35f93c15684026a2eabbfbda27a4dc4",
+    "semantic_hash": "a35f93c15684026a2eabbfbda27a4dc4"
   },
   "app/src/main/java/dev/boudy04/taskvault/settings/SettingsScreen.kt": {
-    "mtime": 1787449593.639117,
-    "seen": 1787449700.7813854,
-    "ast_hash": "c9290f86aaecfbfbaad8a9518f5d8dc5",
-    "semantic_hash": "c9290f86aaecfbfbaad8a9518f5d8dc5"
+    "mtime": 1787469367.929629,
+    "seen": 1787475434.8304868,
+    "ast_hash": "66fe264d58348ede9ceb8ddf237193d7",
+    "semantic_hash": "66fe264d58348ede9ceb8ddf237193d7"
   },
   "app/src/main/java/dev/boudy04/taskvault/settings/SettingsViewModel.kt": {
-    "mtime": 1787433809.047147,
-    "seen": 1787449700.7813854,
-    "ast_hash": "c91cef45ed664314892c34fe0552f6ac",
-    "semantic_hash": "c91cef45ed664314892c34fe0552f6ac"
+    "mtime": 1787456815.7283778,
+    "seen": 1787475434.8304868,
+    "ast_hash": "81e087c475c9fc8da64da7954aa1e9c8",
+    "semantic_hash": "81e087c475c9fc8da64da7954aa1e9c8"
   },
   "app/src/main/java/dev/boudy04/taskvault/statistics/StatisticsScreen.kt": {
     "mtime": 1787423341.0540125,
@@ -258,16 +258,16 @@
     "semantic_hash": "85d8b9fa7685259888d04a81823cecb5"
   },
   "app/src/main/java/dev/boudy04/taskvault/sync/SyncEngine.kt": {
-    "mtime": 1787429845.8034992,
-    "seen": 1787449700.7813854,
-    "ast_hash": "c075c80d39701887c3823cf70954353a",
-    "semantic_hash": "c075c80d39701887c3823cf70954353a"
+    "mtime": 1787466624.2514277,
+    "seen": 1787475434.8325207,
+    "ast_hash": "c14479b3340f4d7a93a4f91db8545c5a",
+    "semantic_hash": "c14479b3340f4d7a93a4f91db8545c5a"
   },
   "app/src/main/java/dev/boudy04/taskvault/sync/SyncOutcome.kt": {
-    "mtime": 1787429722.2718909,
-    "seen": 1787449700.7813854,
-    "ast_hash": "22215e94d4c3ba9deb167fb35eafb6dc",
-    "semantic_hash": "22215e94d4c3ba9deb167fb35eafb6dc"
+    "mtime": 1787456698.9542222,
+    "seen": 1787475434.8325207,
+    "ast_hash": "c25917314a691cc0a044c1c605a9469a",
+    "semantic_hash": "c25917314a691cc0a044c1c605a9469a"
   },
   "app/src/main/java/dev/boudy04/taskvault/sync/SyncScheduler.kt": {
     "mtime": 1787431125.6310008,
@@ -276,10 +276,10 @@
     "semantic_hash": "dd1a479c042ec037b3bf7810eb4175e5"
   },
   "app/src/main/java/dev/boudy04/taskvault/sync/SyncWorker.kt": {
-    "mtime": 1787429815.1115673,
-    "seen": 1787449700.7813854,
-    "ast_hash": "bd9eb39780276ba47850f3c9b79cc18d",
-    "semantic_hash": "bd9eb39780276ba47850f3c9b79cc18d"
+    "mtime": 1787456773.4648938,
+    "seen": 1787475434.8325207,
+    "ast_hash": "689635fa218ca7549f5bb00409e0e8bc",
+    "semantic_hash": "689635fa218ca7549f5bb00409e0e8bc"
   },
   "app/src/main/java/dev/boudy04/taskvault/sync/TaskPayload.kt": {
     "mtime": 1787429712.2087004,
@@ -312,10 +312,10 @@
     "semantic_hash": "49675d6f609cbbf4570067027832396a"
   },
   "app/src/main/java/dev/boudy04/taskvault/tasks/TasksScreen.kt": {
-    "mtime": 1787446754.2220592,
-    "seen": 1787449700.7813854,
-    "ast_hash": "e1fe7249573f3a258c7956e56ea9e9c9",
-    "semantic_hash": "e1fe7249573f3a258c7956e56ea9e9c9"
+    "mtime": 1787466963.7805612,
+    "seen": 1787475434.8350377,
+    "ast_hash": "c1698786e8de7c84dcae94501369593a",
+    "semantic_hash": "c1698786e8de7c84dcae94501369593a"
   },
   "app/src/main/java/dev/boudy04/taskvault/tasks/TasksViewModel.kt": {
     "mtime": 1787432482.5509253,
@@ -348,10 +348,10 @@
     "semantic_hash": "37d6a597551f6b96040bc693579d758b"
   },
   "app/src/main/java/dev/boudy04/taskvault/util/TodoDrawer.kt": {
-    "mtime": 1787449633.7348504,
-    "seen": 1787449700.7813854,
-    "ast_hash": "72ecf278fb28a1bd9cabb96d7cae99c6",
-    "semantic_hash": "72ecf278fb28a1bd9cabb96d7cae99c6"
+    "mtime": 1787467002.944511,
+    "seen": 1787475434.8370655,
+    "ast_hash": "d128adfef71e43212d9c3ff7b3415723",
+    "semantic_hash": "d128adfef71e43212d9c3ff7b3415723"
   },
   "app/src/main/java/dev/boudy04/taskvault/util/TopAppBars.kt": {
     "mtime": 1787446981.622934,
@@ -384,10 +384,10 @@
     "semantic_hash": "541a02c5f91f1b090bf7f3ac8bb282d6"
   },
   "app/src/test/java/dev/boudy04/taskvault/settings/DataStoreSettingsRepositoryTest.kt": {
-    "mtime": 1787446857.2580984,
-    "seen": 1787449700.7813854,
-    "ast_hash": "e6787ada66bc07313c4e8bdc960e6374",
-    "semantic_hash": "e6787ada66bc07313c4e8bdc960e6374"
+    "mtime": 1787451987.0370812,
+    "seen": 1787475434.8390782,
+    "ast_hash": "2dbb0eaee7fdf84bd3799a2eb9c6a939",
+    "semantic_hash": "2dbb0eaee7fdf84bd3799a2eb9c6a939"
   },
   "app/src/test/java/dev/boudy04/taskvault/statistics/StatisticsUtilsTest.kt": {
     "mtime": 1787426226.8774304,
@@ -402,10 +402,10 @@
     "semantic_hash": "d8c899fe0dfdebcb36dd1fc7435017da"
   },
   "app/src/test/java/dev/boudy04/taskvault/sync/SyncEngineTest.kt": {
-    "mtime": 1787430225.4534175,
-    "seen": 1787449700.7813854,
-    "ast_hash": "a70255d501919e8e1b72afa9fb7a8920",
-    "semantic_hash": "a70255d501919e8e1b72afa9fb7a8920"
+    "mtime": 1787466744.7620196,
+    "seen": 1787475434.8405843,
+    "ast_hash": "601b581da6e067a642f98607ba02619a",
+    "semantic_hash": "601b581da6e067a642f98607ba02619a"
   },
   "app/src/test/java/dev/boudy04/taskvault/taskdetail/TaskDetailViewModelTest.kt": {
     "mtime": 1787426273.502875,
@@ -474,10 +474,10 @@
     "semantic_hash": "cee996152a80263927d540b5ac76b08a"
   },
   "shared-test/src/main/java/dev/boudy04/taskvault/data/source/local/FakePendingOpDao.kt": {
-    "mtime": 1787429639.6554794,
-    "seen": 1787449700.7813854,
-    "ast_hash": "b3ba10390cd7cdd254f0d342178072c8",
-    "semantic_hash": "b3ba10390cd7cdd254f0d342178072c8"
+    "mtime": 1787460300.8753574,
+    "seen": 1787475434.8460186,
+    "ast_hash": "6be8fce650c512106f90508ed35c8f2f",
+    "semantic_hash": "6be8fce650c512106f90508ed35c8f2f"
   },
   "shared-test/src/main/java/dev/boudy04/taskvault/data/source/local/FakeTaskDao.kt": {
     "mtime": 1787434484.1556106,
@@ -546,10 +546,10 @@
     "semantic_hash": "a8678d6eecd3b418f389c393357a2195"
   },
   "app/src/main/res/drawable/logo_no_fill.png": {
-    "mtime": 1787421479.4459138,
-    "seen": 1787449700.7813854,
-    "ast_hash": "53ce59e751d5ef9753c1d60cd1811408",
-    "semantic_hash": "53ce59e751d5ef9753c1d60cd1811408"
+    "mtime": 1787465890.1506698,
+    "seen": 1787475434.8485382,
+    "ast_hash": "c36195399cc7d49cf7c92880cb79c3ca",
+    "semantic_hash": "c36195399cc7d49cf7c92880cb79c3ca"
   },
   "app/src/main/res/drawable/trash_icon.png": {
     "mtime": 1787421479.4469151,
@@ -558,34 +558,34 @@
     "semantic_hash": "3330cbe3d0ae578c2754d7bf637fc058"
   },
   "app/src/main/res/mipmap-hdpi/ic_launcher.png": {
-    "mtime": 1787421479.4518335,
-    "seen": 1787449700.7813854,
-    "ast_hash": "eeb03074a8cbc5511ee61f24aa8cfdb7",
-    "semantic_hash": "eeb03074a8cbc5511ee61f24aa8cfdb7"
+    "mtime": 1787456440.787316,
+    "seen": 1787475434.8485382,
+    "ast_hash": "6ba0fdba84118b9070eba7336397cd6e",
+    "semantic_hash": "6ba0fdba84118b9070eba7336397cd6e"
   },
   "app/src/main/res/mipmap-mdpi/ic_launcher.png": {
     "mtime": 1787421479.452841,
     "seen": 1787449700.7813854,
     "ast_hash": "dae7c2d479437f724a6224a054dc1658",
-    "semantic_hash": "dae7c2d479437f724a6224a054dc1658"
+    "semantic_hash": ""
   },
   "app/src/main/res/mipmap-xhdpi/ic_launcher.png": {
-    "mtime": 1787421479.452841,
-    "seen": 1787449700.7813854,
-    "ast_hash": "14e45992e7d9db663e942296f7e29d6a",
-    "semantic_hash": "14e45992e7d9db663e942296f7e29d6a"
+    "mtime": 1787456440.9146245,
+    "seen": 1787475434.8485382,
+    "ast_hash": "8a95e4911d8293792ea704fe34aca6a0",
+    "semantic_hash": "8a95e4911d8293792ea704fe34aca6a0"
   },
   "app/src/main/res/mipmap-xxhdpi/ic_launcher.png": {
-    "mtime": 1787421479.453843,
-    "seen": 1787449700.7813854,
-    "ast_hash": "da994a5327113799faffa7a94bb67466",
-    "semantic_hash": "da994a5327113799faffa7a94bb67466"
+    "mtime": 1787456441.2084866,
+    "seen": 1787475434.8485382,
+    "ast_hash": "10e81d5ed860a20ffb8dd83848b921af",
+    "semantic_hash": "10e81d5ed860a20ffb8dd83848b921af"
   },
   "app/src/main/res/mipmap-xxxhdpi/ic_launcher.png": {
-    "mtime": 1787421479.4551988,
-    "seen": 1787449700.7813854,
-    "ast_hash": "5e5142a925750b55c80f949bd13e4f96",
-    "semantic_hash": "5e5142a925750b55c80f949bd13e4f96"
+    "mtime": 1787456441.6317344,
+    "seen": 1787475434.8485382,
+    "ast_hash": "f64d2bb2b400c4c91bb48fa8f90e925d",
+    "semantic_hash": "f64d2bb2b400c4c91bb48fa8f90e925d"
   },
   "screenshots/screenshots.png": {
     "mtime": 1787421479.475844,
@@ -598,5 +598,77 @@
     "seen": 1787449700.7813854,
     "ast_hash": "61a6d7e5f8ae87c9a2533d0d37b3bec4",
     "semantic_hash": "61a6d7e5f8ae87c9a2533d0d37b3bec4"
+  },
+  "app/src/main/java/dev/boudy04/taskvault/sync/NotificationHelper.kt": {
+    "mtime": 1787457380.0704563,
+    "seen": 1787475434.8325207,
+    "ast_hash": "8a53b186e9279b0b9bb9e806a4a65614",
+    "semantic_hash": "8a53b186e9279b0b9bb9e806a4a65614"
+  },
+  "app/src/main/java/dev/boudy04/taskvault/ui/theme/Color.kt": {
+    "mtime": 1787446287.2560039,
+    "seen": 1787475434.8360643,
+    "ast_hash": "71fb574b757d04d5f8cc5712dd40aa2a",
+    "semantic_hash": "71fb574b757d04d5f8cc5712dd40aa2a"
+  },
+  "app/src/main/java/dev/boudy04/taskvault/ui/theme/Theme.kt": {
+    "mtime": 1787472854.2748415,
+    "seen": 1787475434.8360643,
+    "ast_hash": "21c080f88dc6e35a4e9de5ad7eab7a23",
+    "semantic_hash": "21c080f88dc6e35a4e9de5ad7eab7a23"
+  },
+  "app/src/main/java/dev/boudy04/taskvault/util/BiometricUtils.kt": {
+    "mtime": 1787455286.1015613,
+    "seen": 1787475434.8360643,
+    "ast_hash": "c516277bca18162a57794032b3eb379c",
+    "semantic_hash": "c516277bca18162a57794032b3eb379c"
+  },
+  "app/src/main/java/dev/boudy04/taskvault/widget/TaskVaultWidget.kt": {
+    "mtime": 1787452231.3518744,
+    "seen": 1787475434.8380768,
+    "ast_hash": "6f130ad763d57f81394884b26aa307bc",
+    "semantic_hash": "6f130ad763d57f81394884b26aa307bc"
+  },
+  "app/src/main/java/dev/boudy04/taskvault/widget/WidgetUpdater.kt": {
+    "mtime": 1787451567.3071253,
+    "seen": 1787475434.8380768,
+    "ast_hash": "b5b40168c330199e98ebf449f98841be",
+    "semantic_hash": "b5b40168c330199e98ebf449f98841be"
+  },
+  "app/src/test/java/dev/boudy04/taskvault/widget/WidgetStateTest.kt": {
+    "mtime": 1787452015.8237288,
+    "seen": 1787475434.8420892,
+    "ast_hash": "d756f33f43fc3a102da3f1e75371276f",
+    "semantic_hash": "d756f33f43fc3a102da3f1e75371276f"
+  },
+  "app/src/main/res/raw/ofl_outfit_font_license.txt": {
+    "mtime": 1787446177.1570625,
+    "seen": 1787475434.8485382,
+    "ast_hash": "fc7bcc2f3d37195db3ea982ccfecd531",
+    "semantic_hash": "fc7bcc2f3d37195db3ea982ccfecd531"
+  },
+  "docs/screenshots/edit_priority.png": {
+    "mtime": 1787469755.0656588,
+    "seen": 1787475434.8485382,
+    "ast_hash": "3097967792c3c85c2f47be3793be7ae5",
+    "semantic_hash": "3097967792c3c85c2f47be3793be7ae5"
+  },
+  "docs/screenshots/settings.png": {
+    "mtime": 1787469835.35772,
+    "seen": 1787475434.8485382,
+    "ast_hash": "a94a71b44fd81cbefe40a3fc18e7e00f",
+    "semantic_hash": "a94a71b44fd81cbefe40a3fc18e7e00f"
+  },
+  "docs/screenshots/tasks_dark.png": {
+    "mtime": 1787469622.460157,
+    "seen": 1787475434.8485382,
+    "ast_hash": "855b74cb1883c1c1c145bdf6d9098c6c",
+    "semantic_hash": "855b74cb1883c1c1c145bdf6d9098c6c"
+  },
+  "docs/screenshots/tasks_light.png": {
+    "mtime": 1787469885.5592618,
+    "seen": 1787475434.8485382,
+    "ast_hash": "2fa0158657ea300e2adb0cfd8d2474ae",
+    "semantic_hash": "2fa0158657ea300e2adb0cfd8d2474ae"
   }
 }

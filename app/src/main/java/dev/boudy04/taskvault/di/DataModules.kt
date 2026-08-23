@@ -17,6 +17,7 @@
 package dev.boudy04.taskvault.di
 
 import android.content.Context
+import android.net.ConnectivityManager
 import androidx.room.Room
 import androidx.work.WorkManager
 import dev.boudy04.taskvault.BuildConfig
@@ -124,4 +125,9 @@ object WorkManagerModule {
     @Singleton
     fun provideWorkManager(@ApplicationContext context: Context): WorkManager =
         WorkManager.getInstance(context)
+
+    @Provides
+    @Singleton
+    fun provideConnectivityManager(@ApplicationContext context: Context): ConnectivityManager =
+        context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 }

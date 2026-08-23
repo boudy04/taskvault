@@ -20,6 +20,7 @@ import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import dagger.hilt.android.HiltAndroidApp
+import dev.boudy04.taskvault.sync.ConnectivityWatcher
 import dev.boudy04.taskvault.widget.WidgetUpdater
 import javax.inject.Inject
 import timber.log.Timber
@@ -38,6 +39,9 @@ class TaskVaultApplication : Application(), Configuration.Provider {
     @Inject
     lateinit var widgetUpdater: WidgetUpdater
 
+    @Inject
+    lateinit var connectivityWatcher: ConnectivityWatcher
+
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
             .setWorkerFactory(workerFactory)
@@ -47,5 +51,6 @@ class TaskVaultApplication : Application(), Configuration.Provider {
         super.onCreate()
         if (BuildConfig.DEBUG) Timber.plant(DebugTree())
         widgetUpdater.observe()
+        connectivityWatcher.start()
     }
 }

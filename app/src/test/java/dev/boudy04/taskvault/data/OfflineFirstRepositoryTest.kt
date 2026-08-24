@@ -129,6 +129,28 @@ class OfflineFirstRepositoryTest {
     }
 
     @Test
+    fun createTask_withAssignees_storesColumn_andPayloadCarriesAssigneeIds() = runTest {
+        val repo = repoWithFakes()
+        val id = repo.createTask("Assigned", "body", TaskPriority.MEDIUM, null, emptyList(), listOf(4, 2, 4))
+
+        assertEquals("4,2", fakeTaskDao.getById(id)!!.assigneeIds)
+        val payload = json.decodeFromString<TaskPayload>(fakePendingOps.getAll().single().payload)
+        assertEquals(listOf(4, 2), payload.assigneeIds)
+    }
+
+    @Test
+    fun updateTask_withNewAssignees_replacesInRowAndNextPayload() = runTest {
+        val repo = repoWithFakes()
+        val id = repo.createTask("t", "d", TaskPriority.MEDIUM, null, emptyList(), listOf(1))
+
+        repo.updateTask(id, "t", "d", TaskPriority.MEDIUM, null, emptyList(), listOf(7, 8))
+
+        assertEquals("7,8", fakeTaskDao.getById(id)!!.assigneeIds)
+        val payload = json.decodeFromString<TaskPayload>(fakePendingOps.getAll().last().payload)
+        assertEquals(listOf(7, 8), payload.assigneeIds)
+    }
+
+    @Test
     fun deleteTask_withServerId_enqueuesDelete_andDropsRowImmediately() = runTest {
         val seeded = LocalTask(
             id = "local-1",

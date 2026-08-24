@@ -16,6 +16,9 @@
 
 package dev.boudy04.taskvault.data
 
+/** Group presets always offered in group pickers/filter menus. */
+val GROUP_PRESETS = listOf("work", "personal", "urgent", "errands")
+
 /**
  * Immutable model class for a Task.
  *
@@ -35,6 +38,9 @@ data class Task(
     val priority: TaskPriority = TaskPriority.MEDIUM,
     val dueAt: String? = null,
     val tags: List<String> = emptyList(),
+    /** Workspace member ids assigned to this task; empty = personal task. */
+    val assigneeIds: List<Int> = emptyList(),
+    val createdAt: String? = null,
     val id: String,
 ) {
     val titleForList: String

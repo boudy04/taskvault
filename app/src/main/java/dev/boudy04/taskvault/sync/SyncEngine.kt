@@ -105,6 +105,7 @@ class SyncEngine @Inject constructor(
             return false
         } catch (e: Exception) {
             // Non-connectivity failure (parse/5xx/401): skip reconcile silently.
+            println("SyncEngine pull skipped: $e")
             return true
         }
         val protected = ops.getAll().filter { it.state == PendingOpState.PENDING }.map { it.taskLocalId }.toSet()

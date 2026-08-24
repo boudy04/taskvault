@@ -24,7 +24,14 @@ import dev.boudy04.taskvault.MainCoroutineRule
 import dev.boudy04.taskvault.R
 import dev.boudy04.taskvault.data.FakeTaskRepository
 import dev.boudy04.taskvault.data.Task
+import dev.boudy04.taskvault.data.TaskPriority
 import dev.boudy04.taskvault.data.TaskStatus
+import dev.boudy04.taskvault.data.source.network.AuthRequest
+import dev.boudy04.taskvault.data.source.network.AuthResponse
+import dev.boudy04.taskvault.data.source.network.MemberDto
+import dev.boudy04.taskvault.data.source.network.MemberRequest
+import dev.boudy04.taskvault.data.source.network.TaskApiService
+import dev.boudy04.taskvault.data.source.network.TaskDto
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -36,6 +43,33 @@ import kotlinx.coroutines.test.setMain
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import retrofit2.Response
+
+/** Minimal API stub so the ViewModel can resolve workspace members offline-free. */
+private class FakeApi : TaskApiService {
+    override suspend fun register(body: AuthRequest) = AuthResponse("")
+
+    override suspend fun login(body: AuthRequest) = AuthResponse("")
+
+    override suspend fun listTasks(status: String?) = emptyList<TaskDto>()
+
+    override suspend fun getTask(id: Int) = TaskDto(id = id)
+
+    override suspend fun createTask(task: TaskDto) = task
+
+    override suspend fun updateTask(id: Int, task: TaskDto) = task
+
+    override suspend fun deleteTask(id: Int) = Response.success(Unit)
+
+    override suspend fun listMembers() = listOf(
+        MemberDto(1, "alice"),
+        MemberDto(2, "bob"),
+    )
+
+    override suspend fun createMember(body: MemberRequest) = MemberDto(9, body.username)
+
+    override suspend fun deleteMember(id: Int) = Response.success(Unit)
+}
 
 /**
  * Unit tests for the implementation of [TasksViewModel]
@@ -63,7 +97,7 @@ class TasksViewModelTest {
         val task3 = Task(id = "3", title = "Title3", description = "Desc3", status = TaskStatus.DONE)
         tasksRepository.addTasks(task1, task2, task3)
 
-        tasksViewModel = TasksViewModel(tasksRepository, SavedStateHandle())
+        tasksViewModel = TasksViewModel(tasksRepository, FakeApi(), SavedStateHandle())
     }
 
     @Test
@@ -237,22 +271,128 @@ class TasksViewModelTest {
     }
 
     @Test
-    fun selectTag_narrowsList_andAllClearsIt() = runTest {
+    fun selectGroup_narrowsList_andAllClearsIt() = runTest {
         tasksRepository.addTasks(
             Task(id = "10", title = "Work task", description = "", tags = listOf("work")),
             Task(id = "11", title = "Home task", description = "", tags = listOf("home")),
         )
 
-        tasksViewModel.selectTag("work")
+        tasksViewModel.selectGroup("work")
 
         val filtered = tasksViewModel.uiState.first().items
         assertThat(filtered.map { it.id }).containsExactly("10")
-        assertThat(tasksViewModel.uiState.first().selectedTag).isEqualTo("work")
-        assertThat(tasksViewModel.uiState.first().availableTags).containsAtLeast("home", "work")
+        assertThat(tasksViewModel.uiState.first().selectedGroup).isEqualTo("work")
+        // Presets are always offered even before any task uses them.
+        assertThat(tasksViewModel.uiState.first().availableGroups)
+            .containsAtLeast("home", "work", "errands")
 
-        tasksViewModel.selectTag(null)
-        assertThat(tasksViewModel.uiState.first().selectedTag).isNull()
+        tasksViewModel.selectGroup(null)
+        assertThat(tasksViewModel.uiState.first().selectedGroup).isNull()
         assertThat(tasksViewModel.uiState.first().items).hasSize(5)
+    }
+
+    @Test
+    fun personalTeamSplit_zeroAssigneesIsPersonal() = runTest {
+        tasksRepository.addTasks(
+            Task(id = "40", title = "Solo", description = ""),
+            Task(id = "41", title = "Shared", description = "", assigneeIds = listOf(1)),
+        )
+
+        val state = tasksViewModel.uiState.first()
+        // Team shows everything; Personal only unassigned tasks.
+        assertThat(state.items.map { it.id }).containsExactly("1", "2", "3", "40", "41")
+        assertThat(state.personalItems.map { it.id }).containsExactly("1", "2", "3", "40")
+    }
+
+    @Test
+    fun groupPersonStatusFilter_combineWithAnd() = runTest {
+        tasksRepository.addTasks(
+            Task(id = "30", title = "A work thing", description = "", tags = listOf("work"), status = TaskStatus.TODO),
+            Task(id = "31", title = "Another work thing", description = "", tags = listOf("work"), status = TaskStatus.DONE),
+            Task(id = "32", title = "A home thing", description = "", tags = listOf("home")),
+            Task(id = "33", title = "Work assigned", description = "", tags = listOf("work"), assigneeIds = listOf(2)),
+        )
+
+        tasksViewModel.selectGroup("work")
+        assertThat(tasksViewModel.uiState.first().items.map { it.id })
+            .containsExactly("30", "31", "33")
+
+        tasksViewModel.setSearchQuery("thing")
+        assertThat(tasksViewModel.uiState.first().items.map { it.id })
+            .containsExactly("30", "31")
+
+        tasksViewModel.setFiltering(TasksFilterType.ACTIVE_TASKS)
+        assertThat(tasksViewModel.uiState.first().items.map { it.id })
+            .containsExactly("30")
+
+        // Person filter ANDs too: alice (id 1) owns none of the remaining.
+        tasksViewModel.selectPerson(1)
+        assertThat(tasksViewModel.uiState.first().items).isEmpty()
+
+        tasksViewModel.setFiltering(TasksFilterType.ALL_TASKS)
+        tasksViewModel.setSearchQuery("")
+        tasksViewModel.selectPerson(null)
+        assertThat(tasksViewModel.uiState.first().items.map { it.id })
+            .containsExactly("30", "31", "33")
+    }
+
+    @Test
+    fun personFilter_unassignedMatchesZeroAssignees() = runTest {
+        tasksRepository.addTasks(
+            Task(id = "50", title = "Free", description = ""),
+            Task(id = "51", title = "Bob's", description = "", assigneeIds = listOf(2)),
+        )
+
+        tasksViewModel.selectPerson(TasksViewModel.PERSON_UNASSIGNED)
+        assertThat(tasksViewModel.uiState.first().items.map { it.id })
+            .containsExactly("1", "2", "3", "50")
+
+        tasksViewModel.selectPerson(2)
+        assertThat(tasksViewModel.uiState.first().items.map { it.id }).containsExactly("51")
+    }
+
+    @Test
+    fun sort_nearestDue_nullsLast_ascending() = runTest {
+        tasksRepository.addTasks(
+            Task(id = "60", title = "Late", description = "", dueAt = "2026-08-25T00:00:00Z"),
+            Task(id = "61", title = "Soon", description = "", dueAt = "2026-08-24T00:00:00Z"),
+            Task(id = "62", title = "No date", description = ""),
+        )
+
+        tasksViewModel.setSort(TasksSort.NEAREST_DUE)
+
+        assertThat(tasksViewModel.uiState.first().items.map { it.id })
+            .containsExactly("61", "60", "1", "2", "3", "62").inOrder()
+    }
+
+    @Test
+    fun sort_newestAndOldest_byCreatedAt() = runTest {
+        tasksRepository.addTasks(
+            Task(id = "70", title = "Old", description = "", createdAt = "2026-01-01T00:00:00Z"),
+            Task(id = "71", title = "New", description = "", createdAt = "2026-06-01T00:00:00Z"),
+        )
+
+        tasksViewModel.setSort(TasksSort.NEWEST)
+        assertThat(tasksViewModel.uiState.first().items.map { it.id })
+            .containsExactly("71", "70", "1", "2", "3").inOrder()
+
+        tasksViewModel.setSort(TasksSort.OLDEST)
+        assertThat(tasksViewModel.uiState.first().items.map { it.id })
+            .containsExactly("70", "71", "1", "2", "3").inOrder()
+    }
+
+    @Test
+    fun sort_priority_highFirst() = runTest {
+        tasksRepository.addTasks(
+            Task(id = "80", title = "Low", description = "", priority = TaskPriority.LOW),
+            Task(id = "81", title = "High", description = "", priority = TaskPriority.HIGH),
+            Task(id = "82", title = "Med", description = "", priority = TaskPriority.MEDIUM),
+        )
+
+        tasksViewModel.setSort(TasksSort.PRIORITY)
+
+        assertThat(tasksViewModel.uiState.first().items.map { it.id })
+            .containsExactly("81", "1", "2", "3", "82", "80").inOrder()
     }
 
     @Test
@@ -264,25 +404,11 @@ class TasksViewModelTest {
     }
 
     @Test
-    fun setSearchQuery_matchesTag() = runTest {
+    fun setSearchQuery_matchesGroup() = runTest {
         tasksRepository.addTasks(Task(id = "20", title = "Plain", description = "", tags = listOf("someday")))
 
         tasksViewModel.setSearchQuery("SOMEDAY")
 
         assertThat(tasksViewModel.uiState.first().items.map { it.id }).containsExactly("20")
-    }
-
-    @Test
-    fun searchAndTagFilter_combineWithAnd() = runTest {
-        tasksRepository.addTasks(
-            Task(id = "30", title = "A work thing", description = "", tags = listOf("work")),
-            Task(id = "31", title = "Another", description = "", tags = listOf("work")),
-            Task(id = "32", title = "A home thing", description = "", tags = listOf("home")),
-        )
-
-        tasksViewModel.setSearchQuery("a work")
-        tasksViewModel.selectTag("work")
-
-        assertThat(tasksViewModel.uiState.first().items.map { it.id }).containsExactly("30")
     }
 }

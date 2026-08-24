@@ -35,3 +35,11 @@ enum class TasksFilterType {
      */
     COMPLETED_TASKS
 }
+
+/** Client-side sort orders for the tasks list (UX v2 filter bar). */
+enum class TasksSort {
+    NEAREST_DUE,
+    NEWEST,
+    OLDEST,
+    PRIORITY,
+}

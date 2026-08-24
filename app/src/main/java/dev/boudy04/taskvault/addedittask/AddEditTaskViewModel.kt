@@ -23,6 +23,8 @@ import dev.boudy04.taskvault.R
 import dev.boudy04.taskvault.TodoDestinationsArgs
 import dev.boudy04.taskvault.data.TaskPriority
 import dev.boudy04.taskvault.data.TaskRepository
+import dev.boudy04.taskvault.data.source.network.MemberDto
+import dev.boudy04.taskvault.data.source.network.TaskApiService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -49,6 +51,7 @@ data class AddEditTaskUiState(
 @HiltViewModel
 class AddEditTaskViewModel @Inject constructor(
     private val taskRepository: TaskRepository,
+    private val api: TaskApiService,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -75,6 +78,14 @@ class AddEditTaskViewModel @Inject constructor(
     private val _tagSuggestions = MutableStateFlow<List<String>>(emptyList())
     val tagSuggestions: StateFlow<List<String>> = _tagSuggestions.asStateFlow()
 
+    /** Workspace members for the assignee sheet; empty when offline. */
+    private val _members = MutableStateFlow<List<MemberDto>>(emptyList())
+    val members: StateFlow<List<MemberDto>> = _members.asStateFlow()
+
+    /** Chosen assignee member ids. */
+    private val _assigneeIds = MutableStateFlow<List<Int>>(emptyList())
+    val assigneeIds: StateFlow<List<Int>> = _assigneeIds.asStateFlow()
+
     init {
         if (taskId != null) {
             loadTask(taskId)
@@ -82,7 +93,34 @@ class AddEditTaskViewModel @Inject constructor(
         viewModelScope.launch {
             _tagSuggestions.value = taskRepository.getAllTags().take(MAX_SUGGESTED_TAGS)
         }
+        viewModelScope.launch {
+            try {
+                _members.value = api.listMembers()
+            } catch (_: Exception) {
+                // ponytail: offline = no assignable people in the sheet; retried on open
+            }
+        }
     }
+
+    /** Re-fetches members so the assignee sheet can retry after an offline start. */
+    fun reloadMembers() {
+        viewModelScope.launch {
+            try {
+                _members.value = api.listMembers()
+            } catch (_: Exception) {
+            }
+        }
+    }
+
+    fun toggleAssignee(memberId: Int) {
+        _assigneeIds.value =
+            if (memberId in _assigneeIds.value) _assigneeIds.value - memberId
+            else _assigneeIds.value + memberId
+    }
+
+    /** Usernames for the chosen ids, resolved against [members] ("a, b"). */
+    fun assigneeNames(): String =
+        _members.value.filter { it.id in _assigneeIds.value }.joinToString(", ") { it.username }
 
     /** Commits a chip from raw input: commas stripped (a comma is the stored
      *  column's separator, so "a,b" as one chip would parse back as two tags),
@@ -150,6 +188,7 @@ class AddEditTaskViewModel @Inject constructor(
             _priority.value,
             _dueAt.value,
             _tags.value,
+            _assigneeIds.value,
         )
         _uiState.update {
             it.copy(isTaskSaved = true)
@@ -168,6 +207,7 @@ class AddEditTaskViewModel @Inject constructor(
                 priority = _priority.value,
                 dueAt = _dueAt.value,
                 tags = _tags.value,
+                assigneeIds = _assigneeIds.value,
             )
             _uiState.update {
                 it.copy(isTaskSaved = true)
@@ -185,6 +225,7 @@ class AddEditTaskViewModel @Inject constructor(
                     _priority.value = task.priority
                     _dueAt.value = task.dueAt
                     _tags.value = task.tags
+                    _assigneeIds.value = task.assigneeIds
                     _uiState.update {
                         it.copy(
                             title = task.title,

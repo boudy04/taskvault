@@ -2,7 +2,9 @@ package dev.boudy04.taskvault.data.source.network
 
 import dev.boudy04.taskvault.data.TaskPriority
 import dev.boudy04.taskvault.data.TaskStatus
+import dev.boudy04.taskvault.data.joinIds
 import dev.boudy04.taskvault.data.joinTags
+import dev.boudy04.taskvault.data.parseIds
 import dev.boudy04.taskvault.data.parseTags
 import dev.boudy04.taskvault.data.source.local.LocalTask
 import kotlinx.serialization.SerialName
@@ -20,6 +22,10 @@ data class TaskDto(
     @SerialName("updated_at") val updatedAt: String = "",
     @SerialName("due_at") val dueAt: String? = null,
     @SerialName("tags") val tags: List<String> = emptyList(),
+    /** Server read shape: assignee rows alphabetized by username. */
+    @SerialName("assignees") val assignees: List<MemberDto> = emptyList(),
+    /** Server write shape: full replacement list of member ids. */
+    @SerialName("assignee_ids") val assigneeIds: List<Int> = emptyList(),
 )
 
 fun TaskStatus.toApi(): String = when (this) {
@@ -59,6 +65,7 @@ fun TaskDto.toLocal(): LocalTask = LocalTask(
     updatedAt = updatedAt,
     dueAt = dueAt,
     tags = joinTags(tags),
+    assigneeIds = joinIds(assignees.map { it.id }),
 )
 
 fun LocalTask.toDto(): TaskDto = TaskDto(
@@ -69,4 +76,5 @@ fun LocalTask.toDto(): TaskDto = TaskDto(
     priority = priority.toApi(),
     dueAt = dueAt,
     tags = parseTags(tags),
+    assigneeIds = parseIds(assigneeIds),
 )

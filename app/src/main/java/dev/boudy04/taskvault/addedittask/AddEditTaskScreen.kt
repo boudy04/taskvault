@@ -20,26 +20,25 @@ package dev.boudy04.taskvault.addedittask
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenuItem
@@ -47,9 +46,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
-import androidx.compose.material3.InputChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -69,8 +68,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -81,7 +83,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.boudy04.taskvault.R
+import dev.boudy04.taskvault.data.GROUP_PRESETS
 import dev.boudy04.taskvault.data.TaskPriority
+import dev.boudy04.taskvault.data.source.network.MemberDto
 import dev.boudy04.taskvault.util.AddEditTaskTopAppBar
 import dev.boudy04.taskvault.util.DueDates
 import java.time.Instant
@@ -117,6 +121,16 @@ fun AddEditTaskScreen(
         val dueAt by viewModel.dueAt.collectAsStateWithLifecycle()
         val tags by viewModel.tags.collectAsStateWithLifecycle()
         val tagSuggestions by viewModel.tagSuggestions.collectAsStateWithLifecycle()
+        val members by viewModel.members.collectAsStateWithLifecycle()
+        val assigneeIds by viewModel.assigneeIds.collectAsStateWithLifecycle()
+
+        val haptic = LocalHapticFeedback.current
+        LaunchedEffect(uiState.isTaskSaved) {
+            if (uiState.isTaskSaved) {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onTaskUpdate()
+            }
+        }
 
         AddEditTaskContent(
             loading = uiState.isLoading,
@@ -132,6 +146,10 @@ fun AddEditTaskScreen(
             tagSuggestions = tagSuggestions.filter { it !in tags },
             onTagAdded = viewModel::addTag,
             onTagRemoved = viewModel::removeTag,
+            members = members,
+            assigneeIds = assigneeIds,
+            onToggleAssignee = viewModel::toggleAssignee,
+            onAssigneesSheetOpened = viewModel::reloadMembers,
             modifier = Modifier.padding(paddingValues)
         )
 
@@ -168,6 +186,10 @@ private fun AddEditTaskContent(
     tagSuggestions: List<String>,
     onTagAdded: (String) -> Unit,
     onTagRemoved: (String) -> Unit,
+    members: List<MemberDto>,
+    assigneeIds: List<Int>,
+    onToggleAssignee: (Int) -> Unit,
+    onAssigneesSheetOpened: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var isRefreshing by remember { mutableStateOf(false) }
@@ -218,88 +240,174 @@ private fun AddEditTaskContent(
             )
             PriorityPicker(priority = priority, onPriorityChanged = onPriorityChanged)
             DuePicker(dueAt = dueAt, onDueAtChanged = onDueAtChanged)
-            TagsSection(
-                selected = tags,
-                suggestions = tagSuggestions,
-                onAdd = onTagAdded,
-                onRemove = onTagRemoved,
-            )
-        }
-    }
-}
-
-/**
- * Tag chip editor per the T19 brief: a horizontal FlowRow of selected chips (X removes) with
- * a trailing input field; done/enter commits a chip. Below it, up to 8 existing distinct
- * tags are offered as one-tap suggestion chips.
- */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun TagsSection(
-    selected: List<String>,
-    suggestions: List<String>,
-    onAdd: (String) -> Unit,
-    onRemove: (String) -> Unit,
-) {
-    var input by remember { mutableStateOf("") }
-
-    Text(
-        text = stringResource(id = R.string.tags_label),
-        style = MaterialTheme.typography.titleMedium
-    )
-    FlowRow(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy((-2).dp),
-    ) {
-        selected.forEach { tag ->
-            InputChip(
-                selected = true,
-                onClick = { },
-                label = { Text(tag) },
-                trailingIcon = {
-                    Icon(
-                        imageVector = Icons.Filled.Close,
-                        contentDescription = stringResource(id = R.string.cd_remove_tag),
-                        modifier = Modifier.clickable { onRemove(tag) },
-                    )
+            var showGroupsSheet by remember { mutableStateOf(false) }
+            LabeledPickerRow(
+                label = stringResource(id = R.string.groups_label),
+                value = if (tags.isEmpty()) {
+                    stringResource(id = R.string.groups_none)
+                } else {
+                    tags.joinToString(", ")
                 },
+                onClick = { showGroupsSheet = true }
             )
-        }
-        OutlinedTextField(
-            value = input,
-            onValueChange = { input = it },
-            placeholder = { Text(stringResource(id = R.string.tags_add_hint)) },
-            singleLine = true,
-            modifier = Modifier.width(140.dp),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(
-                onDone = {
-                    if (input.isNotBlank()) {
-                        onAdd(input)
-                    }
-                    input = ""
+            var showAssigneesSheet by remember { mutableStateOf(false) }
+            val assigneeNames = members
+                .filter { it.id in assigneeIds }
+                .joinToString(", ") { it.username }
+            LabeledPickerRow(
+                label = stringResource(id = R.string.assignees_label),
+                value = assigneeNames.ifEmpty { stringResource(id = R.string.assignees_none) },
+                onClick = {
+                    onAssigneesSheetOpened()
+                    showAssigneesSheet = true
                 }
-            ),
-        )
-    }
-    if (suggestions.isNotEmpty()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            suggestions.take(MAX_TAG_SUGGESTIONS).forEach { tag ->
-                FilterChip(
-                    selected = false,
-                    onClick = { onAdd(tag) },
-                    label = { Text(tag) },
+            )
+            if (showGroupsSheet) {
+                GroupsSheet(
+                    selected = tags,
+                    suggestions = tagSuggestions,
+                    onAdd = onTagAdded,
+                    onRemove = onTagRemoved,
+                    onDismiss = { showGroupsSheet = false }
+                )
+            }
+            if (showAssigneesSheet) {
+                AssigneesSheet(
+                    members = members,
+                    selectedIds = assigneeIds,
+                    onToggle = onToggleAssignee,
+                    onDismiss = { showAssigneesSheet = false }
                 )
             }
         }
     }
 }
 
-private const val MAX_TAG_SUGGESTIONS = 8
+/** Read-only labeled row that opens a picker sheet (same pattern as DuePicker). */
+@Composable
+private fun LabeledPickerRow(label: String, value: String, onClick: () -> Unit) {
+    Box(modifier = Modifier.fillMaxWidth()) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = { },
+            readOnly = true,
+            label = { Text(label) },
+            modifier = Modifier.fillMaxWidth(),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Color.Transparent,
+                unfocusedBorderColor = Color.Transparent,
+                cursorColor = MaterialTheme.colorScheme.onSecondary
+            )
+        )
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .clickable(onClick = onClick)
+        )
+    }
+}
+
+/**
+ * Groups picker per UX v2: FilterChips for the presets plus every previously used
+ * group; free-text entry is demoted to a single "Custom..." option at the bottom.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun GroupsSheet(
+    selected: List<String>,
+    suggestions: List<String>,
+    onAdd: (String) -> Unit,
+    onRemove: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var showCustom by remember { mutableStateOf(false) }
+    var custom by remember { mutableStateOf("") }
+
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        FlowRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            (GROUP_PRESETS + suggestions + selected).distinct().forEach { group ->
+                FilterChip(
+                    selected = group in selected,
+                    onClick = { if (group in selected) onRemove(group) else onAdd(group) },
+                    label = { Text(group) },
+                )
+            }
+        }
+        TextButton(onClick = { showCustom = !showCustom }) {
+            Text(stringResource(id = R.string.groups_custom))
+        }
+        if (showCustom) {
+            OutlinedTextField(
+                value = custom,
+                onValueChange = { custom = it },
+                placeholder = { Text(stringResource(id = R.string.groups_custom_hint)) },
+                singleLine = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(
+                    onDone = {
+                        if (custom.isNotBlank()) onAdd(custom)
+                        custom = ""
+                        showCustom = false
+                    }
+                ),
+            )
+        }
+        Spacer(Modifier.height(32.dp))
+    }
+}
+
+/** Assignee picker: checkbox list of workspace members + Done button. */
+@Composable
+private fun AssigneesSheet(
+    members: List<MemberDto>,
+    selectedIds: List<Int>,
+    onToggle: (Int) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Text(
+            text = stringResource(id = R.string.assignees_sheet_title),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+        ) {
+            members.forEach { member ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onToggle(member.id) }
+                        .padding(horizontal = 16.dp),
+                ) {
+                    Checkbox(
+                        checked = member.id in selectedIds,
+                        onCheckedChange = { onToggle(member.id) }
+                    )
+                    Text(member.username)
+                }
+            }
+        }
+        TextButton(
+            onClick = onDismiss,
+            modifier = Modifier.padding(horizontal = 16.dp)
+        ) {
+            Text(stringResource(id = R.string.sheet_done))
+        }
+        Spacer(Modifier.height(24.dp))
+    }
+}
 
 /**
  * "Due" row + pick flow per R20: chips (Today / Tomorrow / Pick date…) then Material3

@@ -22,7 +22,9 @@ import dev.boudy04.taskvault.data.source.local.PendingOpEntity
 import dev.boudy04.taskvault.data.source.local.PendingOpType
 import dev.boudy04.taskvault.data.source.local.TaskDao
 import dev.boudy04.taskvault.data.source.network.toApi
+import dev.boudy04.taskvault.data.joinIds
 import dev.boudy04.taskvault.data.joinTags
+import dev.boudy04.taskvault.data.parseIds
 import dev.boudy04.taskvault.data.parseTags
 import dev.boudy04.taskvault.di.DefaultDispatcher
 import dev.boudy04.taskvault.sync.ReminderScheduler
@@ -59,6 +61,7 @@ class DefaultTaskRepository @Inject constructor(
         priority: TaskPriority,
         dueAt: String?,
         tags: List<String>,
+        assigneeIds: List<Int>,
     ): String {
         // ID creation might be a complex operation so it's executed using the supplied
         // coroutine dispatcher
@@ -74,6 +77,7 @@ class DefaultTaskRepository @Inject constructor(
             priority = priority,
             dueAt = dueAt,
             tags = joinTags(tags),
+            assigneeIds = joinIds(assigneeIds),
         )
         localDataSource.upsert(task)
         enqueue(PendingOpType.CREATE, task)
@@ -88,6 +92,7 @@ class DefaultTaskRepository @Inject constructor(
         priority: TaskPriority,
         dueAt: String?,
         tags: List<String>,
+        assigneeIds: List<Int>,
     ) {
         val task = localDataSource.getById(taskId) ?: throw Exception("Task ($taskId) not found")
         val updated = task.copy(
@@ -96,6 +101,7 @@ class DefaultTaskRepository @Inject constructor(
             priority = priority,
             dueAt = dueAt,
             tags = joinTags(tags),
+            assigneeIds = joinIds(assigneeIds),
         )
         localDataSource.upsert(updated)
         enqueue(PendingOpType.UPDATE, updated)
@@ -190,6 +196,7 @@ class DefaultTaskRepository @Inject constructor(
             serverId = task.serverId,
             dueAt = task.dueAt,
             tags = parseTags(task.tags),
+            assigneeIds = parseIds(task.assigneeIds),
         )
         pendingOps.insert(
             PendingOpEntity(taskLocalId = task.id, opType = type, payload = json.encodeToString(payload)),

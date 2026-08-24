@@ -107,7 +107,13 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideJson(): Json = Json { ignoreUnknownKeys = true }
+    fun provideJson(): Json = Json {
+        ignoreUnknownKeys = true
+        // Server returns null for optional fields (e.g. description); coerce
+        // those nulls to the Kotlin defaults instead of failing the parse.
+        coerceInputValues = true
+        explicitNulls = false
+    }
 
     @Provides
     @Singleton

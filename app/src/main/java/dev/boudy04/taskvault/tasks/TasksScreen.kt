@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package dev.boudy04.taskvault.tasks
 
 import android.Manifest
@@ -21,73 +23,80 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
-import androidx.compose.foundation.Image
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Icon
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Sort
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuBoxScope
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.ui.platform.LocalContext
-import androidx.core.content.ContextCompat
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.res.dimensionResource
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.boudy04.taskvault.R
-import dev.boudy04.taskvault.TodoTheme
-import dev.boudy04.taskvault.settings.ThemeMode
 import dev.boudy04.taskvault.data.Task
-import dev.boudy04.taskvault.data.TaskStatus
-import dev.boudy04.taskvault.data.TaskPriority
+import dev.boudy04.taskvault.settings.ThemeMode
 import dev.boudy04.taskvault.tasks.TasksFilterType.ACTIVE_TASKS
 import dev.boudy04.taskvault.tasks.TasksFilterType.ALL_TASKS
 import dev.boudy04.taskvault.tasks.TasksFilterType.COMPLETED_TASKS
 import dev.boudy04.taskvault.util.DueDates
-import dev.boudy04.taskvault.util.LoadingContent
 import dev.boudy04.taskvault.util.TasksTopAppBar
 
 @Composable
@@ -136,19 +145,24 @@ fun TasksScreen(
 
         TasksContent(
             loading = uiState.isLoading,
-            tasks = uiState.items,
+            personalItems = uiState.personalItems,
+            teamItems = uiState.items,
             pendingSyncIds = uiState.pendingSyncIds,
-            currentFilteringLabel = uiState.filteringUiInfo.currentFilteringLabel,
-            noTasksLabel = uiState.filteringUiInfo.noTasksLabel,
-            noTasksIconRes = uiState.filteringUiInfo.noTaskIconRes,
+            availableGroups = uiState.availableGroups,
+            selectedGroup = uiState.selectedGroup,
+            onSelectGroup = viewModel::selectGroup,
+            members = uiState.members,
+            personFilter = uiState.personFilter,
+            onSelectPerson = viewModel::selectPerson,
+            statusFilter = uiState.statusFilter,
+            onSelectStatus = viewModel::setFiltering,
+            sort = uiState.sort,
+            onSelectSort = viewModel::setSort,
+            searchQuery = uiState.searchQuery,
+            onSearchQueryChanged = viewModel::setSearchQuery,
             onRefresh = viewModel::refresh,
             onTaskClick = onTaskClick,
             onTaskCheckedChange = viewModel::completeTask,
-            availableTags = uiState.availableTags,
-            selectedTag = uiState.selectedTag,
-            searchQuery = uiState.searchQuery,
-            onSearchQueryChanged = viewModel::setSearchQuery,
-            onSelectTag = viewModel::selectTag,
             modifier = Modifier.padding(paddingValues)
         )
 
@@ -175,58 +189,102 @@ fun TasksScreen(
 @Composable
 private fun TasksContent(
     loading: Boolean,
-    tasks: List<Task>,
+    personalItems: List<Task>,
+    teamItems: List<Task>,
     pendingSyncIds: Set<String>,
-    @StringRes currentFilteringLabel: Int,
-    @StringRes noTasksLabel: Int,
-    @DrawableRes noTasksIconRes: Int,
+    availableGroups: List<String>,
+    selectedGroup: String?,
+    onSelectGroup: (String?) -> Unit,
+    members: List<dev.boudy04.taskvault.data.source.network.MemberDto>,
+    personFilter: Int?,
+    onSelectPerson: (Int?) -> Unit,
+    statusFilter: TasksFilterType,
+    onSelectStatus: (TasksFilterType) -> Unit,
+    sort: TasksSort,
+    onSelectSort: (TasksSort) -> Unit,
+    searchQuery: String,
+    onSearchQueryChanged: (String) -> Unit,
     onRefresh: () -> Unit,
     onTaskClick: (Task) -> Unit,
     onTaskCheckedChange: (Task, Boolean) -> Unit,
-    availableTags: List<String>,
-    selectedTag: String?,
-    searchQuery: String,
-    onSearchQueryChanged: (String) -> Unit,
-    onSelectTag: (String?) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    LoadingContent(
-        loading = loading,
-        empty = tasks.isEmpty() && !loading,
-        emptyContent = { TasksEmptyContent(noTasksLabel, noTasksIconRes, modifier) },
-        onRefresh = onRefresh
+    var showPersonal by rememberSaveable { mutableStateOf(false) }
+
+    PullToRefreshBox(
+        isRefreshing = loading,
+        onRefresh = onRefresh,
+        modifier = modifier.fillMaxSize()
     ) {
         Column(
-            modifier = modifier
+            modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = dimensionResource(id = R.dimen.horizontal_margin))
+                .padding(horizontal = 8.dp)
         ) {
-            SearchAndTagBar(
+            SingleChoiceSegmentedButtonRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
+            ) {
+                SegmentedButton(
+                    selected = showPersonal,
+                    onClick = { showPersonal = true },
+                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
+                ) {
+                    Text(stringResource(R.string.section_personal))
+                }
+                SegmentedButton(
+                    selected = !showPersonal,
+                    onClick = { showPersonal = false },
+                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
+                ) {
+                    Text(stringResource(R.string.section_team))
+                }
+            }
+
+            FilterBar(
+                availableGroups = availableGroups,
+                selectedGroup = selectedGroup,
+                onSelectGroup = onSelectGroup,
+                members = members,
+                personFilter = personFilter,
+                onSelectPerson = onSelectPerson,
+                statusFilter = statusFilter,
+                onSelectStatus = onSelectStatus,
+                sort = sort,
+                onSelectSort = onSelectSort,
                 searchQuery = searchQuery,
                 onSearchQueryChanged = onSearchQueryChanged,
-                availableTags = availableTags,
-                selectedTag = selectedTag,
-                onSelectTag = onSelectTag,
             )
-            Text(
-                text = stringResource(currentFilteringLabel),
-                modifier = Modifier.padding(
-                    horizontal = dimensionResource(id = R.dimen.list_item_padding),
-                    vertical = dimensionResource(id = R.dimen.vertical_margin)
-                ),
-                style = MaterialTheme.typography.headlineSmall
-            )
-            LazyColumn {
-                items(
-                    items = tasks,
-                    key = { it.id },
-                    contentType = { "task" }
-                ) { task ->
-                    TaskItem(
-                        task = task,
-                        isUnsynced = task.id in pendingSyncIds,
+
+            if (showPersonal) {
+                if (personalItems.isEmpty()) {
+                    SectionEmpty(stringResource(R.string.empty_personal))
+                } else {
+                    TaskList(
+                        tasks = personalItems,
+                        members = members,
+                        pendingSyncIds = pendingSyncIds,
                         onTaskClick = onTaskClick,
-                        onCheckedChange = { onTaskCheckedChange(task, it) }
+                        onTaskCheckedChange = onTaskCheckedChange
+                    )
+                }
+            } else {
+                Text(
+                    text = stringResource(R.string.team_explainer),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                )
+                if (teamItems.isEmpty()) {
+                    SectionEmpty(stringResource(R.string.empty_team))
+                } else {
+                    TaskList(
+                        tasks = teamItems,
+                        members = members,
+                        pendingSyncIds = pendingSyncIds,
+                        onTaskClick = onTaskClick,
+                        onTaskCheckedChange = onTaskCheckedChange
                     )
                 }
             }
@@ -234,327 +292,462 @@ private fun TasksContent(
     }
 }
 
-/**
- * Compact search field + horizontal tag filter chips ("All" + one per distinct tag),
- * shown below the top bar per the T19 brief. ANDs with the active/completed menu filter.
- */
 @Composable
-private fun SearchAndTagBar(
-    searchQuery: String,
-    onSearchQueryChanged: (String) -> Unit,
-    availableTags: List<String>,
-    selectedTag: String?,
-    onSelectTag: (String?) -> Unit,
-    modifier: Modifier = Modifier,
+private fun SectionEmpty(label: String) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(label, style = MaterialTheme.typography.titleMedium)
+    }
+}
+
+@Composable
+private fun TaskList(
+    tasks: List<Task>,
+    members: List<dev.boudy04.taskvault.data.source.network.MemberDto>,
+    pendingSyncIds: Set<String>,
+    onTaskClick: (Task) -> Unit,
+    onTaskCheckedChange: (Task, Boolean) -> Unit
 ) {
-    Column(modifier = modifier.fillMaxWidth()) {
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = onSearchQueryChanged,
-            placeholder = { Text(stringResource(R.string.search_hint)) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        if (availableTags.isNotEmpty()) {
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(top = 4.dp),
-            ) {
-                item {
-                    FilterChip(
-                        selected = selectedTag == null,
-                        onClick = { onSelectTag(null) },
-                        label = { Text(stringResource(R.string.tag_filter_all)) },
-                    )
-                }
-                items(availableTags) { tag ->
-                    FilterChip(
-                        selected = selectedTag == tag,
-                        onClick = { onSelectTag(if (selectedTag == tag) null else tag) },
-                        label = { Text(tag) },
-                    )
-                }
-            }
+    LazyColumn {
+        items(
+            items = tasks,
+            key = { it.id },
+            contentType = { "task" }
+        ) { task ->
+            TaskItem(
+                task = task,
+                members = members,
+                isUnsynced = task.id in pendingSyncIds,
+                onTaskClick = onTaskClick,
+                onCheckedChange = { onTaskCheckedChange(task, it) },
+                modifier = Modifier.animateItem()
+            )
         }
     }
 }
+
+/**
+ * UX v2 filter bar: Group / Person / Status dropdowns, Sort menu and a compact
+ * expandable search field. All filters AND together.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FilterBar(
+    availableGroups: List<String>,
+    selectedGroup: String?,
+    onSelectGroup: (String?) -> Unit,
+    members: List<dev.boudy04.taskvault.data.source.network.MemberDto>,
+    personFilter: Int?,
+    onSelectPerson: (Int?) -> Unit,
+    statusFilter: TasksFilterType,
+    onSelectStatus: (TasksFilterType) -> Unit,
+    sort: TasksSort,
+    onSelectSort: (TasksSort) -> Unit,
+    searchQuery: String,
+    onSearchQueryChanged: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var searchOpen by rememberSaveable { mutableStateOf(searchQuery.isNotEmpty()) }
+    var groupExpanded by remember { mutableStateOf(false) }
+    var personExpanded by remember { mutableStateOf(false) }
+    var statusExpanded by remember { mutableStateOf(false) }
+    var sortExpanded by remember { mutableStateOf(false) }
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            FilterMenu(
+                label = selectedGroup ?: stringResource(R.string.filter_group),
+                expanded = groupExpanded,
+                onExpandedChange = { groupExpanded = it },
+                modifier = Modifier.weight(1f)
+            ) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.tag_filter_all)) },
+                    onClick = {
+                        onSelectGroup(null)
+                        groupExpanded = false
+                    }
+                )
+                availableGroups.forEach { group ->
+                    DropdownMenuItem(
+                        text = { Text(group) },
+                        onClick = {
+                            onSelectGroup(if (selectedGroup == group) null else group)
+                            groupExpanded = false
+                        }
+                    )
+                }
+            }
+            FilterMenu(
+                label = when (personFilter) {
+                    null -> stringResource(R.string.person_anyone)
+                    TasksViewModel.PERSON_UNASSIGNED ->
+                        stringResource(R.string.person_unassigned)
+                    else -> members.firstOrNull { it.id == personFilter }?.username
+                        ?: stringResource(R.string.person_anyone)
+                },
+                expanded = personExpanded,
+                onExpandedChange = { personExpanded = it },
+                modifier = Modifier.weight(1f)
+            ) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.person_anyone)) },
+                    onClick = {
+                        onSelectPerson(null)
+                        personExpanded = false
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.person_unassigned)) },
+                    onClick = {
+                        onSelectPerson(TasksViewModel.PERSON_UNASSIGNED)
+                        personExpanded = false
+                    }
+                )
+                members.forEach { member ->
+                    DropdownMenuItem(
+                        text = { Text(member.username) },
+                        onClick = {
+                            onSelectPerson(member.id)
+                            personExpanded = false
+                        }
+                    )
+                }
+            }
+            FilterMenu(
+                label = stringResource(
+                    when (statusFilter) {
+                        ALL_TASKS -> R.string.filter_status
+                        ACTIVE_TASKS -> R.string.nav_active
+                        COMPLETED_TASKS -> R.string.nav_completed
+                    }
+                ),
+                expanded = statusExpanded,
+                onExpandedChange = { statusExpanded = it },
+                modifier = Modifier.weight(1f)
+            ) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.tag_filter_all)) },
+                    onClick = {
+                        onSelectStatus(ALL_TASKS)
+                        statusExpanded = false
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.nav_active)) },
+                    onClick = {
+                        onSelectStatus(ACTIVE_TASKS)
+                        statusExpanded = false
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.nav_completed)) },
+                    onClick = {
+                        onSelectStatus(COMPLETED_TASKS)
+                        statusExpanded = false
+                    }
+                )
+            }
+            FilterMenu(
+                label = stringResource(
+                    when (sort) {
+                        TasksSort.NEAREST_DUE -> R.string.sort_nearest_due
+                        TasksSort.NEWEST -> R.string.sort_newest
+                        TasksSort.OLDEST -> R.string.sort_oldest
+                        TasksSort.PRIORITY -> R.string.sort_priority
+                    }
+                ),
+                leadingIcon = { Icon(Icons.Filled.Sort, contentDescription = null) },
+                expanded = sortExpanded,
+                onExpandedChange = { sortExpanded = it },
+                modifier = Modifier.weight(1f)
+            ) {
+                TasksSort.entries.forEach { option ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                stringResource(
+                                    when (option) {
+                                        TasksSort.NEAREST_DUE -> R.string.sort_nearest_due
+                                        TasksSort.NEWEST -> R.string.sort_newest
+                                        TasksSort.OLDEST -> R.string.sort_oldest
+                                        TasksSort.PRIORITY -> R.string.sort_priority
+                                    }
+                                )
+                            )
+                        },
+                        onClick = {
+                            onSelectSort(option)
+                            sortExpanded = false
+                        }
+                    )
+                }
+            }
+            IconButton(onClick = { searchOpen = !searchOpen }) {
+                Icon(
+                    Icons.Filled.Search,
+                    contentDescription = stringResource(R.string.cd_search_toggle)
+                )
+            }
+        }
+
+        AnimatedVisibility(visible = searchOpen) {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = onSearchQueryChanged,
+                placeholder = { Text(stringResource(R.string.search_hint)) },
+                singleLine = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp),
+            )
+        }
+    }
+}
+
+/** Compact labeled dropdown used across the filter bar. */
+@Composable
+private fun FilterMenu(
+    label: String,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    leadingIcon: (@Composable () -> Unit)? = null,
+    content: @Composable (androidx.compose.foundation.layout.ColumnScope.() -> Unit)
+) {
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = onExpandedChange,
+        modifier = modifier.padding(horizontal = 2.dp)
+    ) {
+        OutlinedTextField(
+            value = label,
+            onValueChange = { },
+            readOnly = true,
+            singleLine = true,
+            leadingIcon = leadingIcon,
+            trailingIcon = { Icon(Icons.Filled.ArrowDropDown, contentDescription = null) },
+            textStyle = MaterialTheme.typography.labelMedium,
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(MenuAnchorType.PrimaryNotEditable),
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { onExpandedChange(false) },
+            content = content
+        )
+    }
+}
+
 @Composable
 private fun TaskItem(
     task: Task,
+    members: List<dev.boudy04.taskvault.data.source.network.MemberDto>,
     isUnsynced: Boolean,
     onCheckedChange: (Boolean) -> Unit,
-    onTaskClick: (Task) -> Unit
+    onTaskClick: (Task) -> Unit,
+    modifier: Modifier = Modifier
 ) {
+    val haptic = LocalHapticFeedback.current
+
     Surface(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(
-                    horizontal = 12.dp,
-                    vertical = 12.dp,
-                )
+                .defaultMinSize(minHeight = 56.dp)
                 .clickable { onTaskClick(task) }
+                .padding(horizontal = 12.dp, vertical = 6.dp)
         ) {
-        Checkbox(
-            checked = task.isCompleted,
-            onCheckedChange = onCheckedChange
-        )
-        PriorityChip(priority = task.priority)
-        Text(
-            text = task.titleForList,
-            style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier
-                .weight(1f)
-                .padding(start = dimensionResource(id = R.dimen.horizontal_margin)),
-            textDecoration = if (task.isCompleted) {
-                TextDecoration.LineThrough
-            } else {
-                null
-            }
-        )
-        task.dueAt?.let { iso ->
-            // ponytail: cached per (dueAt, active); overdue staleness within a minute is acceptable
-            val (overdue, dueText) = remember(iso, task.isActive) {
-                val isOverdue = runCatching {
-                    java.time.Instant.parse(iso).isBefore(java.time.Instant.now()) && task.isActive
-                }.getOrDefault(false)
-                isOverdue to DueDates.format(iso).orEmpty()
-            }
-            val dueColor = if (overdue) Color(0xFFB3261E) else MaterialTheme.colorScheme.onSurfaceVariant
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Filled.Schedule,
-                    contentDescription = null,
-                    tint = dueColor,
-                    modifier = Modifier.size(16.dp)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Checkbox(
+                    checked = task.isCompleted,
+                    onCheckedChange = { checked ->
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onCheckedChange(checked)
+                    }
                 )
                 Text(
-                    text = dueText,
+                    text = task.titleForList,
+                    style = MaterialTheme.typography.bodyLarge,
+                    textDecoration = if (task.isCompleted) {
+                        TextDecoration.LineThrough
+                    } else {
+                        null
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 4.dp)
+                )
+                task.dueAt?.let { iso ->
+                    // ponytail: cached per (dueAt, active); overdue staleness within a minute is acceptable
+                    val (overdue, dueText) = remember(iso, task.isActive) {
+                        val isOverdue = runCatching {
+                            java.time.Instant.parse(iso).isBefore(java.time.Instant.now()) &&
+                                task.isActive
+                        }.getOrDefault(false)
+                        isOverdue to DueDates.format(iso).orEmpty()
+                    }
+                    val dueColor =
+                        if (overdue) Color(0xFFB3261E) else MaterialTheme.colorScheme.onSurfaceVariant
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color.Transparent,
+                        border = BorderStroke(1.dp, dueColor),
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Schedule,
+                                contentDescription = null,
+                                tint = dueColor,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                text = dueText,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = dueColor,
+                                modifier = Modifier.padding(start = 4.dp)
+                            )
+                        }
+                    }
+                }
+                if (isUnsynced) {
+                    Icon(
+                        Icons.Filled.CloudOff,
+                        contentDescription = stringResource(R.string.cd_sync_pending),
+                        tint = Color(0xFFFFB300),
+                        modifier = Modifier
+                            .padding(start = 8.dp)
+                            .size(16.dp)
+                            .semantics { contentDescription = "Waiting to sync" }
+                    )
+                } else {
+                    Icon(
+                        Icons.Filled.CloudDone,
+                        contentDescription = stringResource(R.string.cd_sync_synced),
+                        tint = Color(0xFF38693C).copy(alpha = 0.7f),
+                        modifier = Modifier.padding(start = 8.dp).size(16.dp)
+                    )
+                }
+            }
+            if (task.tags.isNotEmpty() || task.assigneeIds.isNotEmpty()) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 48.dp, top = 2.dp, bottom = 4.dp)
+                ) {
+                    task.tags.forEach { tag ->
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = Color.Transparent,
+                            border = BorderStroke(
+                                1.dp,
+                                MaterialTheme.colorScheme.outlineVariant
+                            ),
+                        ) {
+                            Text(
+                                text = tag,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp)
+                            )
+                        }
+                    }
+                    Spacer(Modifier.weight(1f))
+                    AssigneeBadges(assigneeIds = task.assigneeIds, members = members)
+                }
+            }
+        }
+    }
+}
+
+// ponytail: fixed palette hashed by member id; per-user theming would need server colors
+private val assigneeColors = listOf(
+    Color(0xFF7C4DFF), Color(0xFF00897B), Color(0xFFF4511E),
+    Color(0xFF3949AB), Color(0xFF2E7D32), Color(0xFF6D4C41),
+    Color(0xFFAD1457), Color(0xFF00ACC1),
+)
+
+/** Colored initial circles for assigned members; shows at most 3 plus a "+n". */
+@Composable
+private fun AssigneeBadges(
+    assigneeIds: List<Int>,
+    members: List<dev.boudy04.taskvault.data.source.network.MemberDto>,
+    modifier: Modifier = Modifier
+) {
+    if (assigneeIds.isEmpty()) return
+
+    val shown = assigneeIds.take(MAX_BADGES)
+    val overflow = assigneeIds.size - shown.size
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
+    ) {
+        shown.forEach { id ->
+            val name = members.firstOrNull { it.id == id }?.username
+            // Offline / unknown member: fall back to a stable id-derived initial.
+            val initial = (name?.take(1) ?: ('A' + (Math.abs(id) % 26)).toString()).uppercase()
+            val bg = assigneeColors[Math.abs(id) % assigneeColors.size]
+            val desc = stringResource(R.string.cd_assignee_badge, name ?: initial)
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .padding(start = 2.dp)
+                    .size(22.dp)
+                    .background(bg, CircleShape)
+                    .semantics { contentDescription = desc }
+            ) {
+                Text(
+                    text = initial,
                     style = MaterialTheme.typography.labelSmall,
-                    color = dueColor,
-                    modifier = Modifier.padding(start = 4.dp)
+                    color = Color.White
                 )
             }
         }
-        if (isUnsynced) {
-            Icon(
-                Icons.Filled.CloudOff,
-                contentDescription = stringResource(R.string.cd_sync_pending),
-                tint = Color(0xFFFFB300),
-                modifier = Modifier
-                    .padding(start = 8.dp)
-                    .size(16.dp)
-                    .semantics { contentDescription = "Waiting to sync" }
-            )
-        } else {
-            Icon(
-                Icons.Filled.CloudDone,
-                contentDescription = stringResource(R.string.cd_sync_synced),
-                tint = Color(0xFF38693C).copy(alpha = 0.7f),
-                modifier = Modifier.padding(start = 8.dp).size(16.dp)
-            )
-        }
-    }
-    }
-}
-
-private val priorityContainerColors = mapOf(
-    TaskPriority.HIGH to Color(0xFFB3261E),
-    TaskPriority.MEDIUM to Color(0xFF7D5700),
-    TaskPriority.LOW to Color(0xFF38693C)
-)
-
-@Composable
-private fun PriorityChip(priority: TaskPriority) {
-    val label = stringResource(
-        when (priority) {
-            TaskPriority.HIGH -> R.string.priority_high
-            TaskPriority.MEDIUM -> R.string.priority_medium
-            TaskPriority.LOW -> R.string.priority_low
-        }
-    )
-    Surface(
-        shape = RoundedCornerShape(8.dp),
-        color = priorityContainerColors.getValue(priority),
-        contentColor = Color.White
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-        )
-    }
-}
-
-@Composable
-private fun TasksEmptyContent(
-    @StringRes noTasksLabel: Int,
-    @DrawableRes noTasksIconRes: Int,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Image(
-            painter = painterResource(id = noTasksIconRes),
-            contentDescription = stringResource(R.string.no_tasks_image_content_description),
-            modifier = Modifier.size(96.dp)
-        )
-        Text(stringResource(id = noTasksLabel))
-    }
-}
-
-@Preview
-@Composable
-private fun TasksContentPreview() {
-    MaterialTheme {
-        Surface {
-            TasksContent(
-                loading = false,
-                tasks = listOf(
-                    Task(
-                        title = "Title 1",
-                        description = "Description 1",
-                        id = "ID 1"
-                    ),
-                    Task(
-                        title = "Title 2",
-                        description = "Description 2",
-                        status = TaskStatus.DONE,
-                        id = "ID 2"
-                    ),
-                    Task(
-                        title = "Title 3",
-                        description = "Description 3",
-                        status = TaskStatus.DONE,
-                        id = "ID 3"
-                    ),
-                    Task(
-                        title = "Title 4",
-                        description = "Description 4",
-                        id = "ID 4"
-                    ),
-                    Task(
-                        title = "Title 5",
-                        description = "Description 5",
-                        status = TaskStatus.DONE,
-                        id = "ID 5"
-                    ),
-                ),
-                currentFilteringLabel = R.string.label_all,
-                noTasksLabel = R.string.no_tasks_all,
-                noTasksIconRes = R.drawable.logo_no_fill,
-                onRefresh = { },
-                onTaskClick = { },
-                onTaskCheckedChange = { _, _ -> },
-                availableTags = listOf("home", "work"),
-                selectedTag = null,
-                searchQuery = "",
-                onSearchQueryChanged = { },
-                onSelectTag = { },
-                pendingSyncIds = setOf("ID 1")
+        if (overflow > 0) {
+            Text(
+                text = stringResource(R.string.assignees_more, overflow),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 4.dp)
             )
         }
     }
 }
 
-@Preview
-@Composable
-private fun TasksContentEmptyPreview() {
-    MaterialTheme {
-        Surface {
-            TasksContent(
-                loading = false,
-                tasks = emptyList(),
-                currentFilteringLabel = R.string.label_all,
-                noTasksLabel = R.string.no_tasks_all,
-                noTasksIconRes = R.drawable.logo_no_fill,
-                onRefresh = { },
-                onTaskClick = { },
-                onTaskCheckedChange = { _, _ -> },
-                availableTags = emptyList(),
-                selectedTag = null,
-                searchQuery = "",
-                onSearchQueryChanged = { },
-                onSelectTag = { },
-                pendingSyncIds = emptySet()
-            )
-        }
-    }
-}
-
-@Preview
-@Composable
-private fun TasksEmptyContentPreview() {
-    TodoTheme {
-        Surface {
-            TasksEmptyContent(
-                noTasksLabel = R.string.no_tasks_all,
-                noTasksIconRes = R.drawable.logo_no_fill
-            )
-        }
-    }
-}
-
-@Preview
-@Composable
-private fun TaskItemPreview() {
-    MaterialTheme {
-        Surface {
-            TaskItem(
-                task = Task(
-                    title = "Title",
-                    description = "Description",
-                    id = "ID"
-                ),
-                onTaskClick = { },
-                onCheckedChange = { },
-                isUnsynced = false
-            )
-        }
-    }
-}
-
-@Preview
-@Composable
-private fun TaskItemCompletedPreview() {
-    MaterialTheme {
-        Surface {
-            TaskItem(
-                task = Task(
-                    title = "Title",
-                    description = "Description",
-                    status = TaskStatus.DONE,
-                    id = "ID"
-                ),
-                onTaskClick = { },
-                onCheckedChange = { },
-                isUnsynced = true
-            )
-        }
-    }
-}
+private const val MAX_BADGES = 3
 
 @Composable
 private fun RequestNotificationsIfNeeded() {
-    val context = LocalContext.current
+    val context = androidx.compose.ui.platform.LocalContext.current
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { /* denial degrades silently: in-app dot remains */ }
     LaunchedEffect(Unit) {
         if (
             Build.VERSION.SDK_INT >= 33 &&
-            ContextCompat.checkSelfPermission(
+            androidx.core.content.ContextCompat.checkSelfPermission(
                 context,
                 Manifest.permission.POST_NOTIFICATIONS,
             ) != PackageManager.PERMISSION_GRANTED

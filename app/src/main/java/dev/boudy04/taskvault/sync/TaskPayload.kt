@@ -13,4 +13,5 @@ data class TaskPayload(
     val serverId: Int? = null,
     val dueAt: String? = null,
     val tags: List<String> = emptyList(),
+    val assigneeIds: List<Int> = emptyList(),
 )

@@ -45,4 +45,7 @@ data class LocalTask(
 
     /** Comma-joined canonical (trim, lowercase, deduped) tag names. */
     var tags: String = "",
+
+    /** Comma-joined assignee member ids ("1,3"); empty string = unassigned. */
+    var assigneeIds: String = "",
 )

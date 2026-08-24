@@ -41,6 +41,7 @@ interface TaskRepository {
         priority: TaskPriority = TaskPriority.MEDIUM,
         dueAt: String? = null,
         tags: List<String> = emptyList(),
+        assigneeIds: List<Int> = emptyList(),
     ): String
 
     suspend fun updateTask(
@@ -50,6 +51,7 @@ interface TaskRepository {
         priority: TaskPriority = TaskPriority.MEDIUM,
         dueAt: String? = null,
         tags: List<String> = emptyList(),
+        assigneeIds: List<Int> = emptyList(),
     )
 
     suspend fun completeTask(taskId: String)

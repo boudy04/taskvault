@@ -17,7 +17,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="dev.boudy04.taskvault">
 
-    <application>
+    <application android:usesCleartextTraffic="true">
         <activity
             android:name=".HiltTestActivity"
             android:exported="false"  />

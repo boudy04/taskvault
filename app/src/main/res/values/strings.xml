@@ -96,6 +96,36 @@
     <string name="search_hint">Search tasks</string>
     <string name="tag_filter_all">All</string>
 
+    <!-- UX v2: sections, filter bar, rows -->
+    <string name="section_personal">Personal</string>
+    <string name="section_team">Team</string>
+    <string name="team_explainer">Shared workspace - the administrator assigns tasks; members view everything and receive theirs.</string>
+    <string name="empty_personal">No personal tasks</string>
+    <string name="empty_team">No team tasks</string>
+    <string name="filter_group">Group</string>
+    <string name="filter_person">Person</string>
+    <string name="filter_status">Status</string>
+    <string name="filter_sort">Sort</string>
+    <string name="person_anyone">Anyone</string>
+    <string name="person_unassigned">Unassigned</string>
+    <string name="sort_nearest_due">Nearest due</string>
+    <string name="sort_newest">Newest</string>
+    <string name="sort_oldest">Oldest</string>
+    <string name="sort_priority">Priority</string>
+    <string name="cd_search_toggle">Search</string>
+    <string name="cd_assignee_badge">Assigned to %1$s</string>
+    <string name="assignees_more">%1$d more</string>
+
+    <!-- UX v2: edit screen sheets -->
+    <string name="groups_label">Groups</string>
+    <string name="groups_none">None</string>
+    <string name="groups_custom">Custom&#8230;</string>
+    <string name="groups_custom_hint">New group</string>
+    <string name="assignees_label">Assignees</string>
+    <string name="assignees_none">None</string>
+    <string name="assignees_sheet_title">Assignees</string>
+    <string name="sheet_done">Done</string>
+
     <!-- Font -->
     <string name="font_section_title">Font</string>
     <string name="font_family_taskvault">TaskVault (serif)</string>

@@ -22,6 +22,12 @@ import dev.boudy04.taskvault.R.string
 import dev.boudy04.taskvault.TodoDestinationsArgs
 import dev.boudy04.taskvault.data.FakeTaskRepository
 import dev.boudy04.taskvault.data.Task
+import dev.boudy04.taskvault.data.source.network.AuthRequest
+import dev.boudy04.taskvault.data.source.network.AuthResponse
+import dev.boudy04.taskvault.data.source.network.MemberDto
+import dev.boudy04.taskvault.data.source.network.MemberRequest
+import dev.boudy04.taskvault.data.source.network.TaskApiService
+import dev.boudy04.taskvault.data.source.network.TaskDto
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -32,6 +38,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import retrofit2.Response
 
 /**
  * Unit tests for the implementation of [AddEditTaskViewModel].
@@ -63,6 +70,7 @@ class AddEditTaskViewModelTest {
     fun saveNewTaskToRepository_showsSuccessMessageUi() {
         addEditTaskViewModel = AddEditTaskViewModel(
             tasksRepository,
+            FakeApi(),
             SavedStateHandle(mapOf(TodoDestinationsArgs.TASK_ID_ARG to "0"))
         )
 
@@ -88,6 +96,7 @@ class AddEditTaskViewModelTest {
 
         addEditTaskViewModel = AddEditTaskViewModel(
             tasksRepository,
+            FakeApi(),
             SavedStateHandle(mapOf(TodoDestinationsArgs.TASK_ID_ARG to "0"))
         )
 
@@ -105,6 +114,7 @@ class AddEditTaskViewModelTest {
     fun loadTasks_taskShown() {
         addEditTaskViewModel = AddEditTaskViewModel(
             tasksRepository,
+            FakeApi(),
             SavedStateHandle(mapOf(TodoDestinationsArgs.TASK_ID_ARG to "0"))
         )
 
@@ -122,6 +132,7 @@ class AddEditTaskViewModelTest {
     fun saveNewTaskToRepository_emptyTitle_error() {
         addEditTaskViewModel = AddEditTaskViewModel(
             tasksRepository,
+            FakeApi(),
             SavedStateHandle(mapOf(TodoDestinationsArgs.TASK_ID_ARG to "0"))
         )
 
@@ -132,6 +143,7 @@ class AddEditTaskViewModelTest {
     fun saveNewTaskToRepository_emptyDescription_error() {
         addEditTaskViewModel = AddEditTaskViewModel(
             tasksRepository,
+            FakeApi(),
             SavedStateHandle(mapOf(TodoDestinationsArgs.TASK_ID_ARG to "0"))
         )
 
@@ -142,6 +154,7 @@ class AddEditTaskViewModelTest {
     fun saveNewTaskToRepository_emptyDescriptionEmptyTitle_error() {
         addEditTaskViewModel = AddEditTaskViewModel(
             tasksRepository,
+            FakeApi(),
             SavedStateHandle(mapOf(TodoDestinationsArgs.TASK_ID_ARG to "0"))
         )
 
@@ -156,6 +169,7 @@ class AddEditTaskViewModelTest {
         }
         addEditTaskViewModel = AddEditTaskViewModel(
             tasksRepository,
+            FakeApi(),
             SavedStateHandle(mapOf(TodoDestinationsArgs.TASK_ID_ARG to "0"))
         )
 
@@ -167,6 +181,7 @@ class AddEditTaskViewModelTest {
         val iso = "2026-08-24T09:00:00Z"
         addEditTaskViewModel = AddEditTaskViewModel(
             tasksRepository,
+            FakeApi(),
             SavedStateHandle(mapOf(TodoDestinationsArgs.TASK_ID_ARG to "0"))
         )
         addEditTaskViewModel.apply {
@@ -187,6 +202,7 @@ class AddEditTaskViewModelTest {
         }
         addEditTaskViewModel = AddEditTaskViewModel(
             tasksRepository,
+            FakeApi(),
             SavedStateHandle(mapOf(TodoDestinationsArgs.TASK_ID_ARG to "0"))
         )
         addEditTaskViewModel.apply {
@@ -215,6 +231,7 @@ class AddEditTaskViewModelTest {
     fun addTag_stripsCommas_soColumnRoundTripStaysOneChip() {
         addEditTaskViewModel = AddEditTaskViewModel(
             tasksRepository,
+            FakeApi(),
             SavedStateHandle(mapOf(TodoDestinationsArgs.TASK_ID_ARG to "0"))
         )
         addEditTaskViewModel.addTag("a,b")
@@ -226,4 +243,18 @@ class AddEditTaskViewModelTest {
         addEditTaskViewModel.addTag(",")
         assertThat(addEditTaskViewModel.tags.value).containsExactly("ab")
     }
+}
+
+/** Minimal API stub: the ViewModel only needs listMembers() to not throw. */
+private class FakeApi : TaskApiService {
+    override suspend fun register(body: AuthRequest) = AuthResponse("")
+    override suspend fun login(body: AuthRequest) = AuthResponse("")
+    override suspend fun listTasks(status: String?) = emptyList<TaskDto>()
+    override suspend fun getTask(id: Int) = TaskDto(id = id)
+    override suspend fun createTask(task: TaskDto) = task
+    override suspend fun updateTask(id: Int, task: TaskDto) = task
+    override suspend fun deleteTask(id: Int) = Response.success(Unit)
+    override suspend fun listMembers() = emptyList<MemberDto>()
+    override suspend fun createMember(body: MemberRequest) = MemberDto(9, body.username)
+    override suspend fun deleteMember(id: Int) = Response.success(Unit)
 }

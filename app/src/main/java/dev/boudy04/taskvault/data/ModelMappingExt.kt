@@ -45,6 +45,7 @@ fun Task.toLocal() = LocalTask(
     it.priority = priority
     it.dueAt = dueAt
     it.tags = joinTags(tags)
+    it.assigneeIds = joinIds(assigneeIds)
 }
 
 fun List<Task>.toLocal() = map(Task::toLocal)
@@ -58,6 +59,8 @@ fun LocalTask.toExternal() = Task(
     priority = priority,
     dueAt = dueAt,
     tags = parseTags(tags),
+    assigneeIds = parseIds(assigneeIds),
+    createdAt = createdAt,
 )
 
 // Note: JvmName is used to provide a unique name for each extension function with the same name.
@@ -75,6 +78,7 @@ fun TaskPayload.toDtoWithoutServerId() = TaskDto(
     priority = priority,
     dueAt = dueAt,
     tags = tags,
+    assigneeIds = assigneeIds,
 )
 
 fun LocalTask.copyFromDto(dto: TaskDto) = copy(
@@ -87,6 +91,7 @@ fun LocalTask.copyFromDto(dto: TaskDto) = copy(
     updatedAt = dto.updatedAt,
     dueAt = dto.dueAt,
     tags = joinTags(dto.tags),
+    assigneeIds = joinIds(dto.assignees.map { it.id }),
 )
 
 /** Canonicalizes tags (trim, lowercase, dedupe, drop empties) into the stored column form. */
@@ -99,4 +104,15 @@ fun parseTags(column: String): List<String> =
         emptyList()
     } else {
         column.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+    }
+
+/** Joins assignee ids into the stored column form ("1,3"). */
+fun joinIds(ids: List<Int>): String = ids.filter { it > 0 }.distinct().joinToString(",")
+
+/** Parses a comma-joined assignee-id column back into its list. */
+fun parseIds(column: String): List<Int> =
+    if (column.isBlank()) {
+        emptyList()
+    } else {
+        column.split(',').mapNotNull { it.trim().toIntOrNull() }
     }

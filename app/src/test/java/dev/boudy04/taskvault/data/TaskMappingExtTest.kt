@@ -3,7 +3,9 @@ package dev.boudy04.taskvault.data
 import dev.boudy04.taskvault.data.source.local.LocalTask
 import dev.boudy04.taskvault.data.source.network.TaskDto
 import dev.boudy04.taskvault.data.toDtoWithoutServerId
+import dev.boudy04.taskvault.data.joinIds
 import dev.boudy04.taskvault.data.joinTags
+import dev.boudy04.taskvault.data.parseIds
 import dev.boudy04.taskvault.data.source.network.toDto
 import dev.boudy04.taskvault.data.source.network.toLocal
 import dev.boudy04.taskvault.sync.TaskPayload
@@ -110,5 +112,48 @@ class TaskMappingExtTest {
             status = "todo", priority = "high", tags = listOf("a", "b"),
         )
         assertEquals(listOf("a", "b"), payload.toDtoWithoutServerId().tags)
+    }
+
+    @Test
+    fun `assignees round trip dto local external`() {
+        val dto = TaskDto(
+            id = 5, title = "t", description = "d",
+            assignees = listOf(
+                dev.boudy04.taskvault.data.source.network.MemberDto(2, "bob"),
+                dev.boudy04.taskvault.data.source.network.MemberDto(1, "alice"),
+            ),
+        )
+        val local = dto.toLocal()
+        assertEquals("2,1", local.assigneeIds)
+        assertEquals(listOf(2, 1), local.toExternal().assigneeIds)
+    }
+
+    @Test
+    fun `joinIds canonicalizes dedupe and drops invalid`() {
+        assertEquals("1,3", joinIds(listOf(1, 1, 3, 0)))
+        assertEquals("", joinIds(emptyList()))
+        assertEquals(listOf(1, 3), parseIds("1,3"))
+        assertEquals(emptyList<Int>(), parseIds(""))
+    }
+
+    @Test
+    fun `copyFromDto threads assignees both set and cleared`() {
+        val base = LocalTask(id = "l1", title = "old", description = "", isCompleted = false)
+        val assigned = base.copyFromDto(
+            TaskDto(assignees = listOf(dev.boudy04.taskvault.data.source.network.MemberDto(7, "carol")))
+        )
+        assertEquals("7", assigned.assigneeIds)
+        val cleared = assigned.copyFromDto(TaskDto())
+        assertEquals("", cleared.assigneeIds)
+    }
+
+    @Test
+    fun `payload assigneeIds flow into outgoing dto`() {
+        val payload = TaskPayload(
+            localId = "l1", title = "t", description = "",
+            status = "todo", priority = "high",
+            assigneeIds = listOf(4, 5),
+        )
+        assertEquals(listOf(4, 5), payload.toDtoWithoutServerId().assigneeIds)
     }
 }

@@ -30,4 +30,13 @@ interface TaskApiService {
 
     @DELETE("api/tasks/{id}")
     suspend fun deleteTask(@Path("id") id: Int): Response<Unit>
+
+    @GET("api/members")
+    suspend fun listMembers(): List<MemberDto>
+
+    @POST("api/members")
+    suspend fun createMember(@Body body: MemberRequest): MemberDto
+
+    @DELETE("api/members/{id}")
+    suspend fun deleteMember(@Path("id") id: Int): Response<Unit>
 }

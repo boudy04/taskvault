@@ -123,5 +123,14 @@
     <string name="statistics_sync_header">Sync status</string>
     <string name="statistics_sync_detail">%1$d%% synced &#8226; %2$d of %3$d tasks online &#8226; %4$d waiting to upload</string>
     <string name="cd_sync_pending">Waiting to sync</string>
-    <string name="cd_sync_synced">Synced</string></resources>
+    <string name="cd_sync_synced">Synced</string>
+
+    <!-- Team (demo workspace members) -->
+    <string name="team_section_title">Team</string>
+    <string name="team_add_hint">Add member</string>
+    <string name="team_add">Add</string>
+    <string name="cd_remove_member">Remove member</string>
+    <string name="team_error_offline">Can\'t reach the server. Check the connection above.</string>
+    <string name="team_error_duplicate">That username is already taken.</string>
+    <string name="team_error_invalid">Use 3–24 characters: a-z, 0-9, dot, dash, underscore.</string></resources>
 

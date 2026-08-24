@@ -9,6 +9,8 @@ import dev.boudy04.taskvault.data.source.local.PendingOpState
 import dev.boudy04.taskvault.data.source.local.PendingOpType
 import dev.boudy04.taskvault.data.source.network.AuthRequest
 import dev.boudy04.taskvault.data.source.network.AuthResponse
+import dev.boudy04.taskvault.data.source.network.MemberDto
+import dev.boudy04.taskvault.data.source.network.MemberRequest
 import dev.boudy04.taskvault.data.source.network.TaskApiService
 import dev.boudy04.taskvault.data.source.network.TaskDto
 import dev.boudy04.taskvault.settings.FakeSettingsRepository
@@ -63,6 +65,14 @@ private class FakeApi(
         deletedIds += id
         return Response.success(Unit)
     }
+
+    // Members are not part of sync; TeamViewModelTest covers them.
+    override suspend fun listMembers(): List<MemberDto> = emptyList()
+
+    override suspend fun createMember(body: MemberRequest): MemberDto =
+        error("not used")
+
+    override suspend fun deleteMember(id: Int): Response<Unit> = Response.success(Unit)
 }
 
 private fun httpException(code: Int): HttpException =

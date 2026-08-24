@@ -84,6 +84,7 @@ android {
     }
 
     compileOptions {
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
@@ -112,6 +113,7 @@ android {
 dependencies {
 
     // App dependencies
+    coreLibraryDesugaring(libs.android.desugarJdkLibs)
     implementation(libs.androidx.annotation)
     implementation(libs.androidx.biometric)
     implementation(libs.androidx.glance.appwidget)
@@ -211,3 +213,4 @@ dependencies {
     androidTestImplementation(libs.hilt.android.testing)
     kspAndroidTest(libs.hilt.compiler)
 }
+

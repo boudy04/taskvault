@@ -132,5 +132,6 @@
     <string name="cd_remove_member">Remove member</string>
     <string name="team_error_offline">Can\'t reach the server. Check the connection above.</string>
     <string name="team_error_duplicate">That username is already taken.</string>
+    <string name="team_error_delete">Couldn\'t remove member</string>
     <string name="team_error_invalid">Use 3–24 characters: a-z, 0-9, dot, dash, underscore.</string></resources>
 

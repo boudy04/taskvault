@@ -28,7 +28,7 @@ class AlarmReminderScheduler @Inject constructor(
     override fun schedule(localId: String, title: String, dueAtMillis: Long) {
         val delay = dueAtMillis - System.currentTimeMillis()
         if (delay <= 0) return
-        if (canScheduleExact()) {
+        if (android.os.Build.VERSION.SDK_INT >= 23 && canScheduleExact()) {
             alarmManager.setExactAndAllowWhileIdle(
                 AlarmManager.RTC_WAKEUP,
                 dueAtMillis,
@@ -70,3 +70,4 @@ class AlarmReminderScheduler @Inject constructor(
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 }
+

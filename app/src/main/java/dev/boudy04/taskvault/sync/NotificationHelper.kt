@@ -61,7 +61,7 @@ class NotificationHelper @Inject constructor(
 
     /** Silent "task due" shade notification; tapping it opens the app. */
     fun showReminder(localId: String, taskTitle: String) {
-        if (!manager.areNotificationsEnabled()) return
+        if (android.os.Build.VERSION.SDK_INT >= 24 && !manager.areNotificationsEnabled()) return
         ensureReminderChannel()
         val pending = PendingIntent.getActivity(
             context,
@@ -109,6 +109,7 @@ class NotificationHelper @Inject constructor(
         const val REMINDERS_CHANNEL_ID = "reminders"
     }
 }
+
 
 
 

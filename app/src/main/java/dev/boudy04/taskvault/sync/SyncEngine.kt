@@ -75,9 +75,7 @@ class SyncEngine @Inject constructor(
             } catch (e: HttpException) {
                 when (e.code()) {
                     401 -> {
-                        // Expired/invalid JWT: drop the session so the next app open
-                        // shows the login screen instead of retry-looping 401s.
-                        settings.clearSession()
+                        // Expired/invalid JWT: stop as terminal failure, keep the stored token.
                         ops.updateState(op.opId, PendingOpState.PENDING)
                         return SyncOutcome.FAILURE
                     }
@@ -106,10 +104,7 @@ class SyncEngine @Inject constructor(
         } catch (e: IOException) {
             return false
         } catch (e: Exception) {
-            // Expired/invalid JWT with an empty queue: clear the session so the next
-            // app open shows login instead of a zombie logged-in state, then skip
-            // reconcile like any other non-connectivity failure (parse/5xx).
-            if (e is HttpException && e.code() == 401) settings.clearSession()
+            // Non-connectivity failure (parse/5xx/401): skip reconcile silently.
             return true
         }
         val protected = ops.getAll().filter { it.state == PendingOpState.PENDING }.map { it.taskLocalId }.toSet()

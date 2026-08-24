@@ -25,20 +25,16 @@ import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import dev.boudy04.taskvault.ui.theme.PrimaryPillButton
 import dev.boudy04.taskvault.ui.theme.APP_FONT_FAMILY
 import dev.boudy04.taskvault.ui.theme.SYSTEM_FONT_FAMILY
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -54,6 +50,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -82,14 +79,14 @@ fun SettingsScreen(
 
         SettingsContent(
             baseUrl = uiState.baseUrl,
-            username = uiState.username,
+            token = uiState.token,
             appLock = uiState.appLock,
             fontFamily = uiState.fontFamily,
             onBaseUrlChanged = viewModel::updateBaseUrl,
+            onTokenChanged = viewModel::updateToken,
             onAppLockChanged = viewModel::setAppLock,
             onFontFamilyChanged = viewModel::setFontFamily,
             onSave = viewModel::saveConfig,
-            onLogout = viewModel::logout,
             modifier = Modifier.padding(paddingValues)
         )
 
@@ -105,14 +102,14 @@ fun SettingsScreen(
 @Composable
 private fun SettingsContent(
     baseUrl: String,
-    username: String,
+    token: String,
     appLock: Boolean,
     fontFamily: String,
     onBaseUrlChanged: (String) -> Unit,
+    onTokenChanged: (String) -> Unit,
     onAppLockChanged: (Boolean) -> Unit,
     onFontFamilyChanged: (String) -> Unit,
     onSave: () -> Unit,
-    onLogout: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -145,16 +142,14 @@ private fun SettingsContent(
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(text = stringResource(id = R.string.logged_in_as, username))
-            QuietPillButton(onClick = onLogout) {
-                Text(stringResource(id = R.string.logout))
-            }
-        }
+        OutlinedTextField(
+            value = token,
+            onValueChange = onTokenChanged,
+            label = { Text(stringResource(id = R.string.auth_token_hint)) },
+            singleLine = true,
+            visualTransformation = PasswordVisualTransformation(),
+            modifier = Modifier.fillMaxWidth()
+        )
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -238,33 +233,14 @@ private fun SettingsContentPreview() {
     TodoTheme {
         SettingsContent(
             baseUrl = "https://example.com",
-            username = "boudy04",
+            token = "token",
             appLock = false,
             fontFamily = APP_FONT_FAMILY,
             onBaseUrlChanged = { },
+            onTokenChanged = { },
             onAppLockChanged = { },
             onFontFamilyChanged = { },
-            onSave = { },
-            onLogout = { }
+            onSave = { }
         )
     }
-}
-
-/** Quiet tonal+outline pill for secondary actions like logout. */
-@Composable
-fun QuietPillButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    content: @Composable RowScope.() -> Unit
-) {
-    OutlinedButton(
-        onClick = onClick,
-        modifier = modifier,
-        shape = CircleShape,
-        colors = ButtonDefaults.outlinedButtonColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-        ),
-        content = content,
-    )
 }

@@ -85,7 +85,7 @@ class SyncEngineTest {
         api = FakeApi()
         tasks = FakeTaskDao()
         ops = FakePendingOpDao()
-        settings = FakeSettingsRepository(initialToken = "jwt-abc", initialUsername = "boudy04")
+        settings = FakeSettingsRepository(initialToken = "jwt-abc")
         engine = SyncEngine(api, tasks, ops, json, settings, dispatcher)
     }
 
@@ -206,30 +206,14 @@ class SyncEngineTest {
     }
 
     @Test
-    fun unauthorized_401_clearsStoredSession() = runTest(dispatcher) {
-        tasks.upsert(localTask("l6"))
-        enqueue(PendingOpType.CREATE, payload("l6"))
-        api.createError = httpException(401)
-
-        val outcome = engine.run()
-
-        assertThat(outcome).isEqualTo(SyncOutcome.FAILURE)
-        assertThat(settings.sessionToken).isEmpty()
-        assertThat(settings.accountName).isEmpty()
-        assertThat(settings.clearedCount).isEqualTo(1)
-    }
-
-    @Test
-    fun pullPhase_401_withEmptyQueue_clearsSession_andStaysSilent() = runTest(dispatcher) {
+    fun pullPhase_401_withEmptyQueue_staysSilent_andKeepsSession() = runTest(dispatcher) {
         api.listError = httpException(401)
 
         val outcome = engine.run()
 
-        // Pull failure is non-fatal (SUCCESS path), but the expired JWT is dropped.
+        // Pull failure is non-fatal (SUCCESS path) and the stored token is left alone.
         assertThat(outcome).isEqualTo(SyncOutcome.SUCCESS)
-        assertThat(settings.sessionToken).isEmpty()
-        assertThat(settings.accountName).isEmpty()
-        assertThat(settings.clearedCount).isEqualTo(1)
+        assertThat(settings.sessionToken).isEqualTo("jwt-abc")
     }
 
     @Test

@@ -31,7 +31,7 @@ import kotlinx.coroutines.launch
  */
 data class SettingsUiState(
     val baseUrl: String = "",
-    val username: String = "",
+    val token: String = "",
     val appLock: Boolean = false,
     val fontFamily: String = "app",
     val resultText: String? = null,
@@ -50,10 +50,8 @@ class SettingsViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            _uiState.update { it.copy(baseUrl = settings.current().baseUrl) }
-        }
-        viewModelScope.launch {
-            settings.username.collect { user -> _uiState.update { it.copy(username = user) } }
+            val current = settings.current()
+            _uiState.update { it.copy(baseUrl = current.baseUrl, token = current.token) }
         }
         viewModelScope.launch {
             settings.appLock.collect { lock -> _uiState.update { it.copy(appLock = lock) } }
@@ -67,17 +65,15 @@ class SettingsViewModel @Inject constructor(
         _uiState.update { it.copy(baseUrl = value) }
     }
 
-    fun saveConfig() {
-        viewModelScope.launch {
-            // The JWT session token is not editable here; preserve whatever is stored.
-            val token = settings.current().token
-            settings.setConfig(ServerConfig(_uiState.value.baseUrl.trim(), token))
-            _uiState.update { it.copy(resultText = SAVED_MESSAGE) }
-        }
+    fun updateToken(value: String) {
+        _uiState.update { it.copy(token = value) }
     }
 
-    fun logout() {
-        viewModelScope.launch { settings.clearSession() }
+    fun saveConfig() {
+        viewModelScope.launch {
+            settings.setConfig(ServerConfig(_uiState.value.baseUrl.trim(), _uiState.value.token))
+            _uiState.update { it.copy(resultText = SAVED_MESSAGE) }
+        }
     }
 
     fun setAppLock(enabled: Boolean) {

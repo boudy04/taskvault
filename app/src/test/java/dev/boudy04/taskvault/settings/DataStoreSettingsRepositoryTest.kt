@@ -26,8 +26,6 @@ class DataStoreSettingsRepositoryTest {
         val c = r.current()
         assertEquals("https://prject-cv-production.up.railway.app", c.baseUrl)
         assertEquals("", c.token)
-        assertEquals(false, r.loggedIn.first())
-        assertEquals("", r.username.first())
     }
 
     @Test
@@ -36,6 +34,15 @@ class DataStoreSettingsRepositoryTest {
         r.setConfig(ServerConfig("http://10.0.2.2:8000", "abc"))
         assertEquals("abc", r.config.first().token)
         assertEquals("http://10.0.2.2:8000", r.config.first().baseUrl)
+    }
+
+    @Test
+    fun setConfig_customToken_roundTripsThroughCurrent() = runTest {
+        // Regression for the restored token field: a user-entered JWT must survive save/reload.
+        val r = repo(backgroundScope)
+        r.setConfig(ServerConfig("https://example.org", "custom-jwt-123"))
+        assertEquals("custom-jwt-123", r.current().token)
+        assertEquals("https://example.org", r.current().baseUrl)
     }
 
     @Test
@@ -54,19 +61,5 @@ class DataStoreSettingsRepositoryTest {
         assertEquals(true, r.appLock.first())
         r.setAppLock(false)
         assertEquals(false, r.appLock.first())
-    }
-
-    @Test
-    fun session_persists_andClears() = runTest {
-        val r = repo(backgroundScope)
-        r.setSession("jwt-abc", "boudy04")
-        assertEquals("jwt-abc", r.current().token)
-        assertEquals("boudy04", r.username.first())
-        assertEquals(true, r.loggedIn.first())
-
-        r.clearSession()
-        assertEquals("", r.current().token)
-        assertEquals("", r.username.first())
-        assertEquals(false, r.loggedIn.first())
     }
 }

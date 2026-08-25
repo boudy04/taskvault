@@ -26,9 +26,13 @@ import dev.boudy04.taskvault.data.FakeTaskRepository
 import dev.boudy04.taskvault.data.Task
 import dev.boudy04.taskvault.data.TaskPriority
 import dev.boudy04.taskvault.data.TaskStatus
+import dev.boudy04.taskvault.data.source.network.AdminVerifyRequest
 import dev.boudy04.taskvault.data.source.network.AuthRequest
 import dev.boudy04.taskvault.data.source.network.AuthResponse
+import dev.boudy04.taskvault.data.source.network.MeResponse
 import dev.boudy04.taskvault.data.source.network.MemberDto
+import dev.boudy04.taskvault.data.source.network.MemberLoginRequest
+import dev.boudy04.taskvault.data.source.network.MemberLoginResponse
 import dev.boudy04.taskvault.data.source.network.MemberRequest
 import dev.boudy04.taskvault.data.source.network.TaskApiService
 import dev.boudy04.taskvault.data.source.network.TaskDto
@@ -69,6 +73,10 @@ private class FakeApi : TaskApiService {
     override suspend fun createMember(body: MemberRequest) = MemberDto(9, body.username)
 
     override suspend fun deleteMember(id: Int) = Response.success(Unit)
+
+    override suspend fun membersLogin(body: MemberLoginRequest) = MemberLoginResponse("t", "member", body.username)
+    override suspend fun adminVerify(body: AdminVerifyRequest) = MeResponse(1, "x", "admin")
+    override suspend fun membersMe() = MeResponse(1, "x", "member")
 }
 
 /**
@@ -97,7 +105,13 @@ class TasksViewModelTest {
         val task3 = Task(id = "3", title = "Title3", description = "Desc3", status = TaskStatus.DONE)
         tasksRepository.addTasks(task1, task2, task3)
 
-        tasksViewModel = TasksViewModel(tasksRepository, FakeApi(), SavedStateHandle())
+        tasksViewModel = TasksViewModel(
+            tasksRepository,
+            FakeApi(),
+            dev.boudy04.taskvault.settings.FakeSettingsRepository(),
+            dev.boudy04.taskvault.sync.ViewOnlyRejections(),
+            SavedStateHandle(),
+        )
     }
 
     @Test
@@ -401,6 +415,53 @@ class TasksViewModelTest {
 
         val items = tasksViewModel.uiState.first().items
         assertThat(items.map { it.id }).containsExactly("2")
+    }
+
+    @Test
+    fun memberSession_exposesViewOnlyFlags() = runTest {
+        val settings = dev.boudy04.taskvault.settings.FakeSettingsRepository(
+            initialToken = "tok",
+            initialRole = dev.boudy04.taskvault.settings.Session.MEMBER_ROLE,
+            initialUsername = "alice",
+        )
+        tasksViewModel = TasksViewModel(
+            tasksRepository, FakeApi(), settings, dev.boudy04.taskvault.sync.ViewOnlyRejections(), SavedStateHandle(),
+        )
+
+        advanceUntilIdle()
+        val state = tasksViewModel.uiState.first()
+        // FAB hidden + checkboxes disabled both derive from this flag.
+        assertThat(state.isMember).isTrue()
+        assertThat(state.sessionUsername).isEqualTo("alice")
+    }
+
+    @Test
+    fun adminSession_notMember() = runTest {
+        val settings = dev.boudy04.taskvault.settings.FakeSettingsRepository(
+            initialToken = "dev-token",
+            initialRole = "admin",
+            initialUsername = "boudy04",
+        )
+        tasksViewModel = TasksViewModel(
+            tasksRepository, FakeApi(), settings, dev.boudy04.taskvault.sync.ViewOnlyRejections(), SavedStateHandle(),
+        )
+
+        advanceUntilIdle()
+        assertThat(tasksViewModel.uiState.first().isMember).isFalse()
+    }
+
+    @Test
+    fun viewOnlyRejection_surfacesSnackbar() = runTest {
+        val rejections = dev.boudy04.taskvault.sync.ViewOnlyRejections()
+        tasksViewModel = TasksViewModel(
+            tasksRepository, FakeApi(), dev.boudy04.taskvault.settings.FakeSettingsRepository(), rejections, SavedStateHandle(),
+        )
+
+        rejections.signal()
+        advanceUntilIdle()
+
+        assertThat(tasksViewModel.uiState.first().userMessage)
+            .isEqualTo(R.string.view_only_access)
     }
 
     @Test

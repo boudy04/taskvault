@@ -55,6 +55,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dev.boudy04.taskvault.auth.LoginScreen
 import dev.boudy04.taskvault.settings.SettingsRepository
 import dev.boudy04.taskvault.settings.ThemeMode
 import dev.boudy04.taskvault.ui.theme.APP_FONT_FAMILY
@@ -107,21 +108,32 @@ class TodoActivity : FragmentActivity() {
                 onDispose { }
             }
             val scope = rememberCoroutineScope()
+            // Session gating runs before the lock gate: no identity -> picker.
+            var signedIn by remember { mutableStateOf<Boolean?>(null) }
+            LaunchedEffect(Unit) {
+                settingsRepository.session.collect { session ->
+                    signedIn = session.token.isNotBlank()
+                }
+            }
             TaskVaultTheme(themeMode = themeMode, fontChoice = fontChoice) {
-                MainContent(
-                    themeMode = themeMode,
-                    onCycleTheme = {
-                        scope.launch {
-                            settingsRepository.setThemeMode(
-                                when (themeMode) {
-                                    ThemeMode.DARK -> ThemeMode.LIGHT
-                                    ThemeMode.LIGHT -> ThemeMode.SYSTEM
-                                    ThemeMode.SYSTEM -> ThemeMode.DARK
-                                }
-                            )
-                        }
-                    },
-                )
+                when (signedIn) {
+                    null -> Unit
+                    false -> LoginScreen()
+                    true -> MainContent(
+                        themeMode = themeMode,
+                        onCycleTheme = {
+                            scope.launch {
+                                settingsRepository.setThemeMode(
+                                    when (themeMode) {
+                                        ThemeMode.DARK -> ThemeMode.LIGHT
+                                        ThemeMode.LIGHT -> ThemeMode.SYSTEM
+                                        ThemeMode.SYSTEM -> ThemeMode.DARK
+                                    }
+                                )
+                            }
+                        },
+                    )
+                }
             }
         }
     }

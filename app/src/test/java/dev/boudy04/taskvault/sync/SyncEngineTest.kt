@@ -9,13 +9,18 @@ import dev.boudy04.taskvault.data.source.local.PendingOpState
 import dev.boudy04.taskvault.data.source.local.PendingOpType
 import dev.boudy04.taskvault.data.source.network.AuthRequest
 import dev.boudy04.taskvault.data.source.network.AuthResponse
+import dev.boudy04.taskvault.data.source.network.AdminVerifyRequest
+import dev.boudy04.taskvault.data.source.network.MeResponse
 import dev.boudy04.taskvault.data.source.network.MemberDto
+import dev.boudy04.taskvault.data.source.network.MemberLoginRequest
+import dev.boudy04.taskvault.data.source.network.MemberLoginResponse
 import dev.boudy04.taskvault.data.source.network.MemberRequest
 import dev.boudy04.taskvault.data.source.network.TaskApiService
 import dev.boudy04.taskvault.data.source.network.TaskDto
 import dev.boudy04.taskvault.settings.FakeSettingsRepository
 import java.io.IOException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.encodeToString
@@ -68,6 +73,10 @@ private class FakeApi(
 
     // Members are not part of sync; TeamViewModelTest covers them.
     override suspend fun listMembers(): List<MemberDto> = emptyList()
+    override suspend fun membersLogin(body: MemberLoginRequest) =
+        MemberLoginResponse("t", "member", body.username)
+    override suspend fun adminVerify(body: AdminVerifyRequest) = MeResponse(1, "x", "admin")
+    override suspend fun membersMe() = MeResponse(1, "x", "member")
 
     override suspend fun createMember(body: MemberRequest): MemberDto =
         error("not used")
@@ -88,6 +97,7 @@ class SyncEngineTest {
     private lateinit var tasks: FakeTaskDao
     private lateinit var ops: FakePendingOpDao
     private lateinit var settings: FakeSettingsRepository
+    private lateinit var rejections: ViewOnlyRejections
     private lateinit var engine: SyncEngine
 
     @Before
@@ -96,7 +106,8 @@ class SyncEngineTest {
         tasks = FakeTaskDao()
         ops = FakePendingOpDao()
         settings = FakeSettingsRepository(initialToken = "jwt-abc")
-        engine = SyncEngine(api, tasks, ops, json, settings, dispatcher)
+        rejections = ViewOnlyRejections()
+        engine = SyncEngine(api, tasks, ops, json, settings, rejections, dispatcher)
     }
 
     private fun payload(
@@ -201,6 +212,25 @@ class SyncEngineTest {
         assertThat(outcome).isEqualTo(SyncOutcome.SUCCESS)
         assertThat(tasks.getById("l7")?.serverId).isEqualTo(11)
         assertThat(ops.getAll()).isEmpty()
+    }
+
+    @Test
+    fun forbidden_memberWrite_dropsOpAndSignalsRejection() = runTest(dispatcher) {
+        tasks.upsert(localTask("l8", serverId = 12))
+        enqueue(PendingOpType.UPDATE, payload("l8", serverId = 12))
+        api.updateError = httpException(403)
+        // Pull keeps the row only while the server still lists it.
+        val seen = mutableListOf<Unit>()
+        backgroundScope.launch(UnconfinedTestDispatcher()) { rejections.events.collect { seen += it } }
+        api.listResult = listOf(TaskDto(id = 12, title = "T", status = "todo", priority = "high"))
+
+        val outcome = engine.run()
+
+        // View-only rejection: op dropped, row kept, snackbar signal fired.
+        assertThat(outcome).isEqualTo(SyncOutcome.SUCCESS)
+        assertThat(ops.getAll()).isEmpty()
+        assertThat(tasks.getById("l8")).isNotNull()
+        assertThat(seen).hasSize(1)
     }
 
     @Test

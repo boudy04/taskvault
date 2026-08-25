@@ -52,6 +52,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -95,10 +96,13 @@ fun SettingsScreen(
             token = uiState.token,
             appLock = uiState.appLock,
             fontFamily = uiState.fontFamily,
+            isMember = uiState.isMember,
+            sessionUsername = uiState.sessionUsername,
             onBaseUrlChanged = viewModel::updateBaseUrl,
             onTokenChanged = viewModel::updateToken,
             onAppLockChanged = viewModel::setAppLock,
             onFontFamilyChanged = viewModel::setFontFamily,
+            onSwitchIdentity = viewModel::switchIdentity,
             onSave = viewModel::saveConfig,
             teamContent = {
                 TeamSection(
@@ -126,10 +130,13 @@ private fun SettingsContent(
     token: String,
     appLock: Boolean,
     fontFamily: String,
+    isMember: Boolean,
+    sessionUsername: String,
     onBaseUrlChanged: (String) -> Unit,
     onTokenChanged: (String) -> Unit,
     onAppLockChanged: (Boolean) -> Unit,
     onFontFamilyChanged: (String) -> Unit,
+    onSwitchIdentity: () -> Unit,
     onSave: () -> Unit,
     modifier: Modifier = Modifier,
     teamContent: @Composable () -> Unit = {}
@@ -165,14 +172,22 @@ private fun SettingsContent(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
-            OutlinedTextField(
-                value = token,
-                onValueChange = onTokenChanged,
-                label = { Text(stringResource(id = R.string.auth_token_hint)) },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                modifier = Modifier.fillMaxWidth()
-            )
+            if (isMember) {
+                // Members sign in via the identity picker; no key field to fiddle with.
+                Text(text = stringResource(id = R.string.settings_signed_in_as, sessionUsername))
+                TextButton(onClick = onSwitchIdentity) {
+                    Text(stringResource(id = R.string.settings_switch_identity))
+                }
+            } else {
+                OutlinedTextField(
+                    value = token,
+                    onValueChange = onTokenChanged,
+                    label = { Text(stringResource(id = R.string.auth_token_hint)) },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         }
         SectionCard(title = R.string.app_lock_section_title) {
             Box(modifier = Modifier.fillMaxWidth()) {
@@ -341,10 +356,13 @@ private fun SettingsContentPreview() {
             token = "token",
             appLock = false,
             fontFamily = APP_FONT_FAMILY,
+            isMember = false,
+            sessionUsername = "",
             onBaseUrlChanged = { },
             onTokenChanged = { },
             onAppLockChanged = { },
             onFontFamilyChanged = { },
+            onSwitchIdentity = { },
             onSave = { }
         )
     }

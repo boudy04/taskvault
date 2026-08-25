@@ -7,6 +7,10 @@ import dev.boudy04.taskvault.data.source.network.AuthRequest
 import dev.boudy04.taskvault.data.source.network.AuthResponse
 import dev.boudy04.taskvault.data.source.network.MemberDto
 import dev.boudy04.taskvault.data.source.network.MemberRequest
+import dev.boudy04.taskvault.data.source.network.AdminVerifyRequest
+import dev.boudy04.taskvault.data.source.network.MeResponse
+import dev.boudy04.taskvault.data.source.network.MemberLoginRequest
+import dev.boudy04.taskvault.data.source.network.MemberLoginResponse
 import dev.boudy04.taskvault.data.source.network.TaskApiService
 import dev.boudy04.taskvault.data.source.network.TaskDto
 import java.io.IOException
@@ -66,6 +70,9 @@ private class FakeMemberApi(
     override suspend fun deleteTask(id: Int): Response<Unit> = error("not used")
     override suspend fun register(body: AuthRequest): AuthResponse = error("not used")
     override suspend fun login(body: AuthRequest): AuthResponse = error("not used")
+    override suspend fun membersLogin(body: MemberLoginRequest) = MemberLoginResponse("t", "member", body.username)
+    override suspend fun adminVerify(body: AdminVerifyRequest) = MeResponse(1, "x", "admin")
+    override suspend fun membersMe() = MeResponse(1, "x", "member")
 }
 
 @ExperimentalCoroutinesApi

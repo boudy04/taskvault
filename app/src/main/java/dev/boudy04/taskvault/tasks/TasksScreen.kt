@@ -125,6 +125,8 @@ fun TasksScreen(
 ) {
     RequestNotificationsIfNeeded()
 
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -142,17 +144,17 @@ fun TasksScreen(
             )
         },
         floatingActionButton = {
-            SmallFloatingActionButton(
-                onClick = onAddTask,
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            ) {
-                Icon(Icons.Filled.Add, stringResource(id = R.string.add_task))
+            if (!uiState.isMember) {
+                SmallFloatingActionButton(
+                    onClick = onAddTask,
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ) {
+                    Icon(Icons.Filled.Add, stringResource(id = R.string.add_task))
+                }
             }
         }
     ) { paddingValues ->
-        val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-
         TasksContent(
             loading = uiState.isLoading,
             personalItems = uiState.personalItems,
@@ -173,6 +175,8 @@ fun TasksScreen(
             onRefresh = viewModel::refresh,
             onTaskClick = onTaskClick,
             onTaskCheckedChange = viewModel::completeTask,
+            isMember = uiState.isMember,
+            sessionUsername = uiState.sessionUsername,
             modifier = Modifier.padding(paddingValues)
         )
 
@@ -217,6 +221,8 @@ private fun TasksContent(
     onRefresh: () -> Unit,
     onTaskClick: (Task) -> Unit,
     onTaskCheckedChange: (Task, Boolean) -> Unit,
+    isMember: Boolean,
+    sessionUsername: String,
     modifier: Modifier = Modifier
 ) {
     var showPersonal by rememberSaveable { mutableStateOf(false) }
@@ -273,6 +279,22 @@ private fun TasksContent(
                 onSearchQueryChanged = onSearchQueryChanged,
             )
 
+            if (isMember) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = stringResource(R.string.member_banner, sessionUsername),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                    )
+                }
+                Spacer(Modifier.height(4.dp))
+            }
+
             if (showPersonal) {
                 if (personalItems.isEmpty()) {
                     SectionEmpty(
@@ -285,7 +307,8 @@ private fun TasksContent(
                         members = members,
                         pendingSyncIds = pendingSyncIds,
                         onTaskClick = onTaskClick,
-                        onTaskCheckedChange = onTaskCheckedChange
+                        onTaskCheckedChange = onTaskCheckedChange,
+                        checkEnabled = !isMember
                     )
                 }
             } else {
@@ -307,7 +330,8 @@ private fun TasksContent(
                         members = members,
                         pendingSyncIds = pendingSyncIds,
                         onTaskClick = onTaskClick,
-                        onTaskCheckedChange = onTaskCheckedChange
+                        onTaskCheckedChange = onTaskCheckedChange,
+                        checkEnabled = !isMember
                     )
                 }
             }
@@ -343,7 +367,8 @@ private fun TaskList(
     members: List<dev.boudy04.taskvault.data.source.network.MemberDto>,
     pendingSyncIds: Set<String>,
     onTaskClick: (Task) -> Unit,
-    onTaskCheckedChange: (Task, Boolean) -> Unit
+    onTaskCheckedChange: (Task, Boolean) -> Unit,
+    checkEnabled: Boolean
 ) {
     LazyColumn {
         items(
@@ -357,6 +382,7 @@ private fun TaskList(
                 isUnsynced = task.id in pendingSyncIds,
                 onTaskClick = onTaskClick,
                 onCheckedChange = { onTaskCheckedChange(task, it) },
+                checkEnabled = checkEnabled,
                 modifier = Modifier.animateItem()
             )
         }
@@ -602,6 +628,7 @@ private fun TaskItem(
     isUnsynced: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     onTaskClick: (Task) -> Unit,
+    checkEnabled: Boolean,
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
@@ -624,6 +651,7 @@ private fun TaskItem(
         ) {
             MiniCheckbox(
                 checked = task.isCompleted,
+                enabled = checkEnabled,
                 onCheckedChange = { checked ->
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     onCheckedChange(checked)
@@ -724,6 +752,7 @@ private fun DueChip(iso: String, isActive: Boolean) {
 @Composable
 private fun MiniCheckbox(
     checked: Boolean,
+    enabled: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -731,6 +760,7 @@ private fun MiniCheckbox(
         contentAlignment = Alignment.Center,
         modifier = modifier
             .size(24.dp)
+            .alpha(if (enabled) 1f else 0.4f)
             .clip(CircleShape)
             .then(
                 if (checked) {
@@ -739,7 +769,12 @@ private fun MiniCheckbox(
                     Modifier.border(2.dp, MaterialTheme.colorScheme.outline, CircleShape)
                 }
             )
-            .toggleable(value = checked, role = Role.Checkbox, onValueChange = onCheckedChange)
+            .toggleable(
+                value = checked,
+                role = Role.Checkbox,
+                enabled = enabled,
+                onValueChange = onCheckedChange
+            )
     ) {
         if (checked) {
             Icon(

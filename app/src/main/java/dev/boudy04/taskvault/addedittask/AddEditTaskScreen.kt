@@ -124,6 +124,7 @@ fun AddEditTaskScreen(
         val tagSuggestions by viewModel.tagSuggestions.collectAsStateWithLifecycle()
         val members by viewModel.members.collectAsStateWithLifecycle()
         val assigneeIds by viewModel.assigneeIds.collectAsStateWithLifecycle()
+        val isMember by viewModel.isMember.collectAsStateWithLifecycle()
 
         val haptic = LocalHapticFeedback.current
         LaunchedEffect(uiState.isTaskSaved) {
@@ -151,6 +152,7 @@ fun AddEditTaskScreen(
             assigneeIds = assigneeIds,
             onToggleAssignee = viewModel::toggleAssignee,
             onAssigneesSheetOpened = viewModel::reloadMembers,
+            hideAssignees = isMember,
             modifier = Modifier.padding(paddingValues)
         )
 
@@ -191,6 +193,7 @@ private fun AddEditTaskContent(
     assigneeIds: List<Int>,
     onToggleAssignee: (Int) -> Unit,
     onAssigneesSheetOpened: () -> Unit,
+    hideAssignees: Boolean,
     modifier: Modifier = Modifier
 ) {
     var isRefreshing by remember { mutableStateOf(false) }
@@ -252,34 +255,27 @@ private fun AddEditTaskContent(
                     },
                     onClick = { showGroupsSheet = true }
                 )
-                var showAssigneesSheet by remember { mutableStateOf(false) }
-                val assigneeNames = members
-                    .filter { it.id in assigneeIds }
-                    .joinToString(", ") { it.username }
-                FieldRow(
-                    label = stringResource(id = R.string.assignees_label),
-                    value = assigneeNames.ifEmpty { stringResource(id = R.string.assignees_none) },
-                    onClick = {
-                        onAssigneesSheetOpened()
-                        showAssigneesSheet = true
+                if (!hideAssignees) {
+                    var showAssigneesSheet by remember { mutableStateOf(false) }
+                    val assigneeNames = members
+                        .filter { it.id in assigneeIds }
+                        .joinToString(", ") { it.username }
+                    FieldRow(
+                        label = stringResource(id = R.string.assignees_label),
+                        value = assigneeNames.ifEmpty { stringResource(id = R.string.assignees_none) },
+                        onClick = {
+                            onAssigneesSheetOpened()
+                            showAssigneesSheet = true
+                        }
+                    )
+                    if (showAssigneesSheet) {
+                        AssigneesSheet(
+                            members = members,
+                            selectedIds = assigneeIds,
+                            onToggle = onToggleAssignee,
+                            onDismiss = { showAssigneesSheet = false }
+                        )
                     }
-                )
-                if (showGroupsSheet) {
-                    GroupsSheet(
-                        selected = tags,
-                        suggestions = tagSuggestions,
-                        onAdd = onTagAdded,
-                        onRemove = onTagRemoved,
-                        onDismiss = { showGroupsSheet = false }
-                    )
-                }
-                if (showAssigneesSheet) {
-                    AssigneesSheet(
-                        members = members,
-                        selectedIds = assigneeIds,
-                        onToggle = onToggleAssignee,
-                        onDismiss = { showAssigneesSheet = false }
-                    )
                 }
             }
         }
@@ -435,7 +431,7 @@ private fun AssigneesSheet(
 }
 
 /**
- * "Due" row + pick flow per R20: chips (Today / Tomorrow / Pick date…) then Material3
+ * "Due" row + pick flow per R20: chips (Today / Tomorrow / Pick dateÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦) then Material3
  * TimePicker; [Clear] removes the due. The ViewModel stores ISO-8601 UTC.
  */
 @Composable

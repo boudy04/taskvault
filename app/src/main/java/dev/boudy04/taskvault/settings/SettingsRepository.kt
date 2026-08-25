@@ -12,21 +12,33 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
+/** Who is signed in; blank token = nobody (identity picker shows). */
+data class Session(val token: String = "", val role: String = "", val username: String = "") {
+    /** Member sessions are view-only; the UI mirrors what the server enforces. */
+    val isMember: Boolean get() = role == MEMBER_ROLE
+
+    companion object {
+        const val MEMBER_ROLE = "member"
+    }
+}
 
 interface SettingsRepository {
     val config: Flow<ServerConfig>
+    val session: Flow<Session>
     val themeMode: Flow<ThemeMode>
     val fontFamily: Flow<String>
     val appLock: Flow<Boolean>
 
     suspend fun current(): ServerConfig
     suspend fun setConfig(config: ServerConfig)
+    suspend fun setSession(token: String, role: String, username: String)
+    suspend fun clearSession()
     suspend fun setThemeMode(mode: ThemeMode)
     suspend fun setFontFamily(family: String)
     suspend fun setAppLock(enabled: Boolean)
 }
 
-private const val DEFAULT_URL = "https://prject-cv-production.up.railway.app"
+private const val DEFAULT_URL = "http://10.0.2.2:8000"
 private const val DEFAULT_TOKEN = ""
 
 @Singleton
@@ -37,11 +49,21 @@ class DataStoreSettingsRepository @Inject constructor(
     private object Keys {
         val url = stringPreferencesKey("server_url")
         val token = stringPreferencesKey("auth_token")
+        val role = stringPreferencesKey("auth_role")
+        val username = stringPreferencesKey("auth_username")
         val themeMode = stringPreferencesKey("theme_mode")
         val fontFamily = stringPreferencesKey("font_family")
         val appLock = booleanPreferencesKey("app_lock")
     }
 
+
+    override val session: Flow<Session> = dataStore.data.map { p ->
+        Session(
+            token = p[Keys.token] ?: DEFAULT_TOKEN,
+            role = p[Keys.role] ?: "",
+            username = p[Keys.username] ?: "",
+        )
+    }
     override val config: Flow<ServerConfig> = dataStore.data.map { p ->
         ServerConfig(p[Keys.url] ?: DEFAULT_URL, p[Keys.token] ?: DEFAULT_TOKEN)
     }
@@ -57,6 +79,22 @@ class DataStoreSettingsRepository @Inject constructor(
         dataStore.edit { p ->
             p[Keys.url] = config.baseUrl
             p[Keys.token] = config.token
+        }
+    }
+
+    override suspend fun setSession(token: String, role: String, username: String) {
+        dataStore.edit { p ->
+            p[Keys.token] = token
+            p[Keys.role] = role
+            p[Keys.username] = username
+        }
+    }
+
+    override suspend fun clearSession() {
+        dataStore.edit { p ->
+            p.remove(Keys.token)
+            p.remove(Keys.role)
+            p.remove(Keys.username)
         }
     }
 

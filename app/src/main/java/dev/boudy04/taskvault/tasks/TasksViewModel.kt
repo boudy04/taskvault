@@ -28,6 +28,9 @@ import dev.boudy04.taskvault.data.Task
 import dev.boudy04.taskvault.data.TaskRepository
 import dev.boudy04.taskvault.data.source.network.MemberDto
 import dev.boudy04.taskvault.data.source.network.TaskApiService
+import dev.boudy04.taskvault.settings.SettingsRepository
+import dev.boudy04.taskvault.settings.Session
+import dev.boudy04.taskvault.sync.ViewOnlyRejections
 import dev.boudy04.taskvault.tasks.TasksFilterType.ACTIVE_TASKS
 import dev.boudy04.taskvault.tasks.TasksFilterType.ALL_TASKS
 import dev.boudy04.taskvault.tasks.TasksFilterType.COMPLETED_TASKS
@@ -67,6 +70,9 @@ data class TasksUiState(
     /** The Status menu mirrors the top-bar/drawer filter (they are one setting). */
     val statusFilter: TasksFilterType = ALL_TASKS,
     val sort: TasksSort = TasksSort.NEAREST_DUE,
+    /** Member sessions are view-only: banner shows, FAB hides, checkboxes disable. */
+    val isMember: Boolean = false,
+    val sessionUsername: String = "",
 )
 
 /** Everything the filter bar can set, held together so combine stays within 5 flows. */
@@ -84,6 +90,8 @@ private data class FilterState(
 class TasksViewModel @Inject constructor(
     private val taskRepository: TaskRepository,
     private val api: TaskApiService,
+    private val settingsRepository: SettingsRepository,
+    private val viewOnlyRejections: ViewOnlyRejections,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -96,11 +104,21 @@ class TasksViewModel @Inject constructor(
 
     private val _filterState = MutableStateFlow(FilterState())
 
+    /** Current identity; drives the member role-aware UI flags. */
+    private val _session = MutableStateFlow(Session())
+
     /** Workspace members for the Person filter; degrades to empty when offline. */
     private val _members = MutableStateFlow<List<MemberDto>>(emptyList())
 
     init {
         viewModelScope.launch { loadMembers() }
+        viewModelScope.launch {
+            settingsRepository.session.collect { _session.value = it }
+        }
+        viewModelScope.launch {
+            // Server rejected a queued write with 403: disclose the role limit.
+            viewOnlyRejections.events.collect { showSnackbarMessage(R.string.view_only_access) }
+        }
     }
 
     /** Workspace members for the Person filter/assignee badges; empty when offline. */
@@ -137,9 +155,13 @@ class TasksViewModel @Inject constructor(
         val sort: TasksSort = TasksSort.NEAREST_DUE,
         val members: List<MemberDto> = emptyList(),
         val statusFilter: TasksFilterType = ALL_TASKS,
+        val isMember: Boolean = false,
+        val sessionUsername: String = "",
     )
 
     private val _extras: Flow<ListExtras> = combine(
+        _session,
+        _members,
         combine(
             taskRepository.getPendingSyncIdsStream(),
             // Errors surface through the main list pipeline; the group menu degrades silently.
@@ -151,8 +173,7 @@ class TasksViewModel @Inject constructor(
         ) { pending, tags, filterState, statusType ->
             Triple(pending, tags, filterState to statusType)
         },
-        _members,
-    ) { (pending, tags, filterAndStatus), members ->
+    ) { session, members, (pending, tags, filterAndStatus) ->
         val (query, group, person, sort) = filterAndStatus.first
         ListExtras(
             pendingSyncIds = pending,
@@ -163,6 +184,8 @@ class TasksViewModel @Inject constructor(
             sort = sort,
             members = members,
             statusFilter = filterAndStatus.second,
+            isMember = session.isMember,
+            sessionUsername = session.username,
         )
     }
 
@@ -204,6 +227,8 @@ class TasksViewModel @Inject constructor(
             personFilter = extras.person,
             statusFilter = extras.statusFilter,
             sort = extras.sort,
+            isMember = extras.isMember,
+            sessionUsername = extras.sessionUsername,
         )
     }
         .stateIn(

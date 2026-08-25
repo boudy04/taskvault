@@ -27,6 +27,7 @@ class SyncEngine @Inject constructor(
     private val ops: PendingOpDao,
     private val json: Json,
     private val settings: SettingsRepository,
+    private val viewOnlyRejections: ViewOnlyRejections,
     @IoDispatcher private val io: CoroutineDispatcher,
 ) {
     suspend fun run(): SyncOutcome = withContext(io) {
@@ -88,6 +89,12 @@ class SyncEngine @Inject constructor(
                     in 500..599 -> {
                         ops.updateState(op.opId, PendingOpState.PENDING)
                         return SyncOutcome.RETRY
+                    }
+                    403 -> {
+                        // Member token hit a write route: drop the op, keep the row,
+                        // and let the task list disclose the role limit.
+                        ops.deleteByIds(listOf(op.opId))
+                        viewOnlyRejections.signal()
                     }
                     else ->
                         // unrecoverable 4xx: drop op, keep row

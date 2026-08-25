@@ -22,9 +22,13 @@ import dev.boudy04.taskvault.R.string
 import dev.boudy04.taskvault.TodoDestinationsArgs
 import dev.boudy04.taskvault.data.FakeTaskRepository
 import dev.boudy04.taskvault.data.Task
+import dev.boudy04.taskvault.data.source.network.AdminVerifyRequest
 import dev.boudy04.taskvault.data.source.network.AuthRequest
 import dev.boudy04.taskvault.data.source.network.AuthResponse
+import dev.boudy04.taskvault.data.source.network.MeResponse
 import dev.boudy04.taskvault.data.source.network.MemberDto
+import dev.boudy04.taskvault.data.source.network.MemberLoginRequest
+import dev.boudy04.taskvault.data.source.network.MemberLoginResponse
 import dev.boudy04.taskvault.data.source.network.MemberRequest
 import dev.boudy04.taskvault.data.source.network.TaskApiService
 import dev.boudy04.taskvault.data.source.network.TaskDto
@@ -71,6 +75,7 @@ class AddEditTaskViewModelTest {
         addEditTaskViewModel = AddEditTaskViewModel(
             tasksRepository,
             FakeApi(),
+            dev.boudy04.taskvault.settings.FakeSettingsRepository(),
             SavedStateHandle(mapOf(TodoDestinationsArgs.TASK_ID_ARG to "0"))
         )
 
@@ -97,6 +102,7 @@ class AddEditTaskViewModelTest {
         addEditTaskViewModel = AddEditTaskViewModel(
             tasksRepository,
             FakeApi(),
+            dev.boudy04.taskvault.settings.FakeSettingsRepository(),
             SavedStateHandle(mapOf(TodoDestinationsArgs.TASK_ID_ARG to "0"))
         )
 
@@ -115,6 +121,7 @@ class AddEditTaskViewModelTest {
         addEditTaskViewModel = AddEditTaskViewModel(
             tasksRepository,
             FakeApi(),
+            dev.boudy04.taskvault.settings.FakeSettingsRepository(),
             SavedStateHandle(mapOf(TodoDestinationsArgs.TASK_ID_ARG to "0"))
         )
 
@@ -133,6 +140,7 @@ class AddEditTaskViewModelTest {
         addEditTaskViewModel = AddEditTaskViewModel(
             tasksRepository,
             FakeApi(),
+            dev.boudy04.taskvault.settings.FakeSettingsRepository(),
             SavedStateHandle(mapOf(TodoDestinationsArgs.TASK_ID_ARG to "0"))
         )
 
@@ -144,6 +152,7 @@ class AddEditTaskViewModelTest {
         addEditTaskViewModel = AddEditTaskViewModel(
             tasksRepository,
             FakeApi(),
+            dev.boudy04.taskvault.settings.FakeSettingsRepository(),
             SavedStateHandle(mapOf(TodoDestinationsArgs.TASK_ID_ARG to "0"))
         )
 
@@ -155,6 +164,7 @@ class AddEditTaskViewModelTest {
         addEditTaskViewModel = AddEditTaskViewModel(
             tasksRepository,
             FakeApi(),
+            dev.boudy04.taskvault.settings.FakeSettingsRepository(),
             SavedStateHandle(mapOf(TodoDestinationsArgs.TASK_ID_ARG to "0"))
         )
 
@@ -170,6 +180,7 @@ class AddEditTaskViewModelTest {
         addEditTaskViewModel = AddEditTaskViewModel(
             tasksRepository,
             FakeApi(),
+            dev.boudy04.taskvault.settings.FakeSettingsRepository(),
             SavedStateHandle(mapOf(TodoDestinationsArgs.TASK_ID_ARG to "0"))
         )
 
@@ -182,6 +193,7 @@ class AddEditTaskViewModelTest {
         addEditTaskViewModel = AddEditTaskViewModel(
             tasksRepository,
             FakeApi(),
+            dev.boudy04.taskvault.settings.FakeSettingsRepository(),
             SavedStateHandle(mapOf(TodoDestinationsArgs.TASK_ID_ARG to "0"))
         )
         addEditTaskViewModel.apply {
@@ -203,6 +215,7 @@ class AddEditTaskViewModelTest {
         addEditTaskViewModel = AddEditTaskViewModel(
             tasksRepository,
             FakeApi(),
+            dev.boudy04.taskvault.settings.FakeSettingsRepository(),
             SavedStateHandle(mapOf(TodoDestinationsArgs.TASK_ID_ARG to "0"))
         )
         addEditTaskViewModel.apply {
@@ -232,6 +245,7 @@ class AddEditTaskViewModelTest {
         addEditTaskViewModel = AddEditTaskViewModel(
             tasksRepository,
             FakeApi(),
+            dev.boudy04.taskvault.settings.FakeSettingsRepository(),
             SavedStateHandle(mapOf(TodoDestinationsArgs.TASK_ID_ARG to "0"))
         )
         addEditTaskViewModel.addTag("a,b")
@@ -257,4 +271,8 @@ private class FakeApi : TaskApiService {
     override suspend fun listMembers() = emptyList<MemberDto>()
     override suspend fun createMember(body: MemberRequest) = MemberDto(9, body.username)
     override suspend fun deleteMember(id: Int) = Response.success(Unit)
+
+    override suspend fun membersLogin(body: MemberLoginRequest) = MemberLoginResponse("t", "member", body.username)
+    override suspend fun adminVerify(body: AdminVerifyRequest) = MeResponse(1, "x", "admin")
+    override suspend fun membersMe() = MeResponse(1, "x", "member")
 }

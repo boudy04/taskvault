@@ -35,6 +35,8 @@ data class SettingsUiState(
     val appLock: Boolean = false,
     val fontFamily: String = "app",
     val resultText: String? = null,
+    val sessionUsername: String = "",
+    val isMember: Boolean = false,
 )
 
 /**
@@ -59,6 +61,13 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             settings.fontFamily.collect { family -> _uiState.update { it.copy(fontFamily = family) } }
         }
+        viewModelScope.launch {
+            settings.session.collect { session ->
+                _uiState.update {
+                    it.copy(sessionUsername = session.username, isMember = session.isMember)
+                }
+            }
+        }
     }
 
     fun updateBaseUrl(value: String) {
@@ -82,6 +91,11 @@ class SettingsViewModel @Inject constructor(
 
     fun setFontFamily(family: String) {
         viewModelScope.launch { settings.setFontFamily(family) }
+    }
+
+    /** Wipes the identity; activity-level gating swaps back to the login picker. */
+    fun switchIdentity() {
+        viewModelScope.launch { settings.clearSession() }
     }
 
     fun resultMessageShown() {

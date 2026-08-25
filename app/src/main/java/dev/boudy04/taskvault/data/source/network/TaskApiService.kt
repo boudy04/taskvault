@@ -39,4 +39,13 @@ interface TaskApiService {
 
     @DELETE("api/members/{id}")
     suspend fun deleteMember(@Path("id") id: Int): Response<Unit>
+
+    @POST("api/members/login")
+    suspend fun membersLogin(@Body body: MemberLoginRequest): MemberLoginResponse
+
+    @POST("api/admin/verify")
+    suspend fun adminVerify(@Body body: AdminVerifyRequest): MeResponse
+
+    @GET("api/members/me")
+    suspend fun membersMe(): MeResponse
 }

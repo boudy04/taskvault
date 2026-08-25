@@ -25,6 +25,7 @@ import dev.boudy04.taskvault.data.TaskPriority
 import dev.boudy04.taskvault.data.TaskRepository
 import dev.boudy04.taskvault.data.source.network.MemberDto
 import dev.boudy04.taskvault.data.source.network.TaskApiService
+import dev.boudy04.taskvault.settings.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -52,6 +53,7 @@ data class AddEditTaskUiState(
 class AddEditTaskViewModel @Inject constructor(
     private val taskRepository: TaskRepository,
     private val api: TaskApiService,
+    settingsRepository: SettingsRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -86,6 +88,10 @@ class AddEditTaskViewModel @Inject constructor(
     private val _assigneeIds = MutableStateFlow<List<Int>>(emptyList())
     val assigneeIds: StateFlow<List<Int>> = _assigneeIds.asStateFlow()
 
+    /** Members are view-only: the assignee row hides (server rejects writes anyway). */
+    private val _isMember = MutableStateFlow(false)
+    val isMember: StateFlow<Boolean> = _isMember.asStateFlow()
+
     init {
         if (taskId != null) {
             loadTask(taskId)
@@ -99,6 +105,9 @@ class AddEditTaskViewModel @Inject constructor(
             } catch (_: Exception) {
                 // ponytail: offline = no assignable people in the sheet; retried on open
             }
+        }
+        viewModelScope.launch {
+            settingsRepository.session.collect { _isMember.value = it.isMember }
         }
     }
 

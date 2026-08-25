@@ -6,6 +6,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -21,10 +23,12 @@ class DataStoreSettingsRepositoryTest {
     )
 
     @Test
-    fun defaults_areRailwayAndBlankToken() = runTest {
+    fun defaults_areLocalUvicornAndBlankToken() = runTest {
         val r = repo(backgroundScope)
         val c = r.current()
-        assertEquals("https://prject-cv-production.up.railway.app", c.baseUrl)
+        // ponytail: T28 identity endpoints live only on the not-yet-deployed task-api branch;
+        // flip this default back to Railway when it ships.
+        assertEquals("http://10.0.2.2:8000", c.baseUrl)
         assertEquals("", c.token)
     }
 
@@ -61,5 +65,37 @@ class DataStoreSettingsRepositoryTest {
         assertEquals(true, r.appLock.first())
         r.setAppLock(false)
         assertEquals(false, r.appLock.first())
+    }
+
+    @Test
+    fun session_roundTripsTokenRoleUsername() = runTest {
+        val r = repo(backgroundScope)
+        assertEquals(Session("", "", ""), r.session.first())
+        r.setSession("tok-1", "member", "alice")
+        val s = r.session.first()
+        assertEquals("tok-1", s.token)
+        assertEquals("member", s.role)
+        assertEquals("alice", s.username)
+        assertTrue(s.isMember)
+        // The auth interceptor reads the token via config; both keys stay in sync.
+        assertEquals("tok-1", r.current().token)
+    }
+
+    @Test
+    fun clearSession_wipesAllThreeKeys() = runTest {
+        val r = repo(backgroundScope)
+        r.setSession("tok-2", "admin", "boudy04")
+        r.clearSession()
+        val s = r.session.first()
+        assertEquals("", s.token)
+        assertEquals("", s.role)
+        assertEquals("", s.username)
+    }
+
+    @Test
+    fun adminSession_isNotMember() = runTest {
+        val r = repo(backgroundScope)
+        r.setSession("dev-token", "admin", "boudy04")
+        assertFalse(r.session.first().isMember)
     }
 }

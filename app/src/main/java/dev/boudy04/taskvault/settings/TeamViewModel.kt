@@ -67,6 +67,7 @@ class TeamViewModel @Inject constructor(
             } catch (e: HttpException) {
                 _uiState.update {
                     it.copy(errorRes = when (e.code()) {
+                        HTTP_FORBIDDEN -> R.string.view_only_access
                         HTTP_CONFLICT -> R.string.team_error_duplicate
                         HTTP_UNPROCESSABLE -> R.string.team_error_invalid
                         else -> R.string.team_error_offline
@@ -94,9 +95,9 @@ class TeamViewModel @Inject constructor(
     }
 
     private companion object {
+        const val HTTP_FORBIDDEN = 403
         const val HTTP_CONFLICT = 409
         const val HTTP_UNPROCESSABLE = 422
     }
 }
-
 

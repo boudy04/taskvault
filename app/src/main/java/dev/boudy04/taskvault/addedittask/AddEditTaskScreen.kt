@@ -27,27 +27,28 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Done
-import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -238,72 +239,96 @@ private fun AddEditTaskContent(
                     .fillMaxWidth(),
                 colors = textFieldColors
             )
-            PriorityPicker(priority = priority, onPriorityChanged = onPriorityChanged)
-            DuePicker(dueAt = dueAt, onDueAtChanged = onDueAtChanged)
-            var showGroupsSheet by remember { mutableStateOf(false) }
-            LabeledPickerRow(
-                label = stringResource(id = R.string.groups_label),
-                value = if (tags.isEmpty()) {
-                    stringResource(id = R.string.groups_none)
-                } else {
-                    tags.joinToString(", ")
-                },
-                onClick = { showGroupsSheet = true }
-            )
-            var showAssigneesSheet by remember { mutableStateOf(false) }
-            val assigneeNames = members
-                .filter { it.id in assigneeIds }
-                .joinToString(", ") { it.username }
-            LabeledPickerRow(
-                label = stringResource(id = R.string.assignees_label),
-                value = assigneeNames.ifEmpty { stringResource(id = R.string.assignees_none) },
-                onClick = {
-                    onAssigneesSheetOpened()
-                    showAssigneesSheet = true
+            Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                PriorityPicker(priority = priority, onPriorityChanged = onPriorityChanged)
+                DuePicker(dueAt = dueAt, onDueAtChanged = onDueAtChanged)
+                var showGroupsSheet by remember { mutableStateOf(false) }
+                FieldRow(
+                    label = stringResource(id = R.string.groups_label),
+                    value = if (tags.isEmpty()) {
+                        stringResource(id = R.string.groups_none)
+                    } else {
+                        tags.joinToString(", ")
+                    },
+                    onClick = { showGroupsSheet = true }
+                )
+                var showAssigneesSheet by remember { mutableStateOf(false) }
+                val assigneeNames = members
+                    .filter { it.id in assigneeIds }
+                    .joinToString(", ") { it.username }
+                FieldRow(
+                    label = stringResource(id = R.string.assignees_label),
+                    value = assigneeNames.ifEmpty { stringResource(id = R.string.assignees_none) },
+                    onClick = {
+                        onAssigneesSheetOpened()
+                        showAssigneesSheet = true
+                    }
+                )
+                if (showGroupsSheet) {
+                    GroupsSheet(
+                        selected = tags,
+                        suggestions = tagSuggestions,
+                        onAdd = onTagAdded,
+                        onRemove = onTagRemoved,
+                        onDismiss = { showGroupsSheet = false }
+                    )
                 }
-            )
-            if (showGroupsSheet) {
-                GroupsSheet(
-                    selected = tags,
-                    suggestions = tagSuggestions,
-                    onAdd = onTagAdded,
-                    onRemove = onTagRemoved,
-                    onDismiss = { showGroupsSheet = false }
-                )
-            }
-            if (showAssigneesSheet) {
-                AssigneesSheet(
-                    members = members,
-                    selectedIds = assigneeIds,
-                    onToggle = onToggleAssignee,
-                    onDismiss = { showAssigneesSheet = false }
-                )
+                if (showAssigneesSheet) {
+                    AssigneesSheet(
+                        members = members,
+                        selectedIds = assigneeIds,
+                        onToggle = onToggleAssignee,
+                        onDismiss = { showAssigneesSheet = false }
+                    )
+                }
             }
         }
     }
 }
 
-/** Read-only labeled row that opens a picker sheet (same pattern as DuePicker). */
+/**
+ * Unified field row: muted label above value, hairline divider below, chevron
+ * on tappable rows. 56dp min height per visual-polish spec.
+ */
 @Composable
-private fun LabeledPickerRow(label: String, value: String, onClick: () -> Unit) {
-    Box(modifier = Modifier.fillMaxWidth()) {
-        OutlinedTextField(
-            value = value,
-            onValueChange = { },
-            readOnly = true,
-            label = { Text(label) },
-            modifier = Modifier.fillMaxWidth(),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color.Transparent,
-                unfocusedBorderColor = Color.Transparent,
-                cursorColor = MaterialTheme.colorScheme.onSecondary
+private fun FieldRow(
+    label: String,
+    value: String,
+    onClick: (() -> Unit)?,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = 56.dp)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 10.dp)
+        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(top = 2.dp, bottom = 10.dp)
             )
-        )
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .clickable(onClick = onClick)
-        )
+            if (onClick != null) {
+                Icon(
+                    Icons.Filled.ArrowDropDown,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+        HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outline)
     }
 }
 
@@ -423,29 +448,11 @@ private fun DuePicker(
     var showTimePicker by remember { mutableStateOf(false) }
     var pickedDate by remember { mutableStateOf<LocalDate?>(null) }
 
-    val textFieldColors = OutlinedTextFieldDefaults.colors(
-        focusedBorderColor = Color.Transparent,
-        unfocusedBorderColor = Color.Transparent,
-        cursorColor = MaterialTheme.colorScheme.onSecondary
+    FieldRow(
+        label = stringResource(id = R.string.due_label),
+        value = DueDates.format(dueAt) ?: stringResource(id = R.string.due_none),
+        onClick = { showChips = true }
     )
-
-    // The read-only field swallows taps, so a transparent overlay routes them to the picker.
-    Box(modifier = Modifier.fillMaxWidth()) {
-        OutlinedTextField(
-            value = DueDates.format(dueAt) ?: stringResource(id = R.string.due_none),
-            onValueChange = { },
-            readOnly = true,
-            label = { Text(stringResource(id = R.string.due_label)) },
-            trailingIcon = { Icon(Icons.Filled.Schedule, contentDescription = null) },
-            modifier = Modifier.fillMaxWidth(),
-            colors = textFieldColors
-        )
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .clickable { showChips = true }
-        )
-    }
 
     if (showChips) {
         val selectedTime = dueAt?.let {
@@ -583,21 +590,13 @@ private fun PriorityPicker(
             TaskPriority.HIGH -> R.string.priority_high
         }
     )
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = it }
-    ) {
-        OutlinedTextField(
+    Box {
+        FieldRow(
+            label = stringResource(id = R.string.priority_label),
             value = selectedLabel,
-            onValueChange = { },
-            readOnly = true,
-            label = { Text(stringResource(id = R.string.priority_label)) },
-            trailingIcon = { Icon(Icons.Filled.ArrowDropDown, contentDescription = null) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+            onClick = { expanded = true }
         )
-        ExposedDropdownMenu(
+        DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {

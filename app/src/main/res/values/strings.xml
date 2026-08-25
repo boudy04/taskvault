@@ -102,6 +102,11 @@
     <string name="team_explainer">Shared workspace - the administrator assigns tasks; members view everything and receive theirs.</string>
     <string name="empty_personal">No personal tasks</string>
     <string name="empty_team">No team tasks</string>
+    <string name="empty_title_clear">All clear</string>
+    <string name="empty_title_nothing">Nothing here yet</string>
+    <!-- Settings section headers -->
+    <string name="server_section_title">Server</string>
+    <string name="app_lock_section_title">App lock</string>
     <string name="filter_group">Group</string>
     <string name="filter_person">Person</string>
     <string name="filter_status">Status</string>

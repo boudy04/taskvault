@@ -22,13 +22,19 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.biometric.BiometricPrompt
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import dev.boudy04.taskvault.ui.theme.PrimaryPillButton
 import dev.boudy04.taskvault.ui.theme.APP_FONT_FAMILY
@@ -43,6 +49,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -148,72 +155,70 @@ private fun SettingsContent(
             .fillMaxSize()
             .padding(all = dimensionResource(id = R.dimen.horizontal_margin))
             .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        OutlinedTextField(
-            value = baseUrl,
-            onValueChange = onBaseUrlChanged,
-            label = { Text(stringResource(id = R.string.server_url_hint)) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
-        OutlinedTextField(
-            value = token,
-            onValueChange = onTokenChanged,
-            label = { Text(stringResource(id = R.string.auth_token_hint)) },
-            singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth()
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = stringResource(id = R.string.app_lock),
-                style = MaterialTheme.typography.titleMedium
+        SectionCard(title = R.string.server_section_title) {
+            OutlinedTextField(
+                value = baseUrl,
+                onValueChange = onBaseUrlChanged,
+                label = { Text(stringResource(id = R.string.server_url_hint)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
             )
-            Switch(
-                checked = appLock,
-                // Enabling only after a successful biometric/credential verify, so users can
-                // never lock themselves out without a working authenticator.
-                onCheckedChange = { checked ->
-                    if (checked) {
-                        val activity = context as? FragmentActivity
-                        if (activity != null) {
-                            activity.verifyThen {
+            OutlinedTextField(
+                value = token,
+                onValueChange = onTokenChanged,
+                label = { Text(stringResource(id = R.string.auth_token_hint)) },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+        SectionCard(title = R.string.app_lock_section_title) {
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Switch(
+                    checked = appLock,
+                    // Enabling only after a successful biometric/credential verify, so users can
+                    // never lock themselves out without a working authenticator.
+                    onCheckedChange = { checked ->
+                        if (checked) {
+                            val activity = context as? FragmentActivity
+                            if (activity != null) {
+                                activity.verifyThen {
+                                    onAppLockChanged(true)
+                                }
+                            } else {
+                                // Never silently dead-end users on an unexpected host context.
+                                Timber.w("Host context is not a FragmentActivity; enabling App lock without verification")
                                 onAppLockChanged(true)
                             }
                         } else {
-                            // Never silently dead-end users on an unexpected host context.
-                            Timber.w("Host context is not a FragmentActivity; enabling App lock without verification")
-                            onAppLockChanged(true)
+                            onAppLockChanged(false)
                         }
-                    } else {
-                        onAppLockChanged(false)
-                    }
-                }
-            )
+                    },
+                    modifier = Modifier.align(Alignment.CenterEnd)
+                )
+            }
         }
-        Text(
-            text = stringResource(id = R.string.font_section_title),
-            style = MaterialTheme.typography.titleMedium
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            FilterChip(
-                selected = fontFamily == APP_FONT_FAMILY,
-                onClick = { onFontFamilyChanged(APP_FONT_FAMILY) },
-                label = { Text(stringResource(id = R.string.font_family_taskvault)) }
-            )
-            FilterChip(
-                selected = fontFamily == SYSTEM_FONT_FAMILY,
-                onClick = { onFontFamilyChanged(SYSTEM_FONT_FAMILY) },
-                label = { Text(stringResource(id = R.string.font_family_system)) }
-            )
+        SectionCard(title = R.string.font_section_title) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterChip(
+                    selected = fontFamily == APP_FONT_FAMILY,
+                    onClick = { onFontFamilyChanged(APP_FONT_FAMILY) },
+                    label = { Text(stringResource(id = R.string.font_family_taskvault)) }
+                )
+                FilterChip(
+                    selected = fontFamily == SYSTEM_FONT_FAMILY,
+                    onClick = { onFontFamilyChanged(SYSTEM_FONT_FAMILY) },
+                    label = { Text(stringResource(id = R.string.font_family_system)) }
+                )
+            }
+        }
+        SectionCard(title = R.string.team_section_title) {
+            teamContent()
         }
         PrimaryPillButton(
             onClick = onSaveWithPermission,
@@ -221,7 +226,35 @@ private fun SettingsContent(
         ) {
             Text(stringResource(id = R.string.settings_save))
         }
-        teamContent()
+    }
+}
+
+/** M3 card with a muted labelMedium header above it (visual-polish spec). */
+@Composable
+private fun SectionCard(
+    title: Int,
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = stringResource(id = title),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(6.dp))
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(all = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                content = content
+            )
+        }
     }
 }
 
@@ -238,10 +271,6 @@ private fun TeamSection(
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
-        Text(
-            text = stringResource(id = R.string.team_section_title),
-            style = MaterialTheme.typography.titleMedium
-        )
         state.members.forEach { member ->
             Row(
                 modifier = Modifier.fillMaxWidth(),

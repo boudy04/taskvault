@@ -21,6 +21,8 @@ import dev.boudy04.taskvault.settings.ThemeMode
 private val DarkColors = darkColorScheme(
     primary = PrimaryDark,
     onPrimary = OnPrimaryDark,
+    primaryContainer = PrimaryContainerDark,
+    onPrimaryContainer = OnPrimaryContainerDark,
     secondaryContainer = SecondaryContainerDark,
     background = BackgroundDark,
     onBackground = OnBackgroundDark,
@@ -33,6 +35,8 @@ private val DarkColors = darkColorScheme(
 private val LightColors = lightColorScheme(
     primary = PrimaryLight,
     onPrimary = OnPrimaryLight,
+    primaryContainer = PrimaryContainerLight,
+    onPrimaryContainer = OnPrimaryContainerLight,
     background = BackgroundLight,
     onBackground = OnBackgroundLight,
     surface = SurfaceLight,

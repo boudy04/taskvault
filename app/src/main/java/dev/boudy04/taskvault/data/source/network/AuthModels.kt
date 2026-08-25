@@ -1,5 +1,6 @@
 package dev.boudy04.taskvault.data.source.network
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /** Request body for /api/auth/register and /api/auth/login. */
@@ -25,3 +26,19 @@ data class AdminVerifyRequest(val token: String)
 /** Identity echo returned by /api/admin/verify and /api/members/me. */
 @Serializable
 data class MeResponse(val id: Int, val username: String, val role: String)
+
+/** Server task note (read shape). */
+@Serializable
+data class NoteDto(
+    val author: String,
+    val body: String,
+    @SerialName("created_at") val createdAt: String = "",
+)
+
+/** Note create body for POST /api/tasks/{id}/notes. */
+@Serializable
+data class NoteRequest(val body: String)
+
+/** Status-only write body: the only payload assignees may PUT. */
+@Serializable
+data class TaskStatusUpdate(val status: String)

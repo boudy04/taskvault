@@ -6,10 +6,8 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.boudy04.taskvault.R
 import dev.boudy04.taskvault.data.source.network.AdminVerifyRequest
-import dev.boudy04.taskvault.data.source.network.MemberDto
 import dev.boudy04.taskvault.data.source.network.MemberLoginRequest
 import dev.boudy04.taskvault.data.source.network.TaskApiService
-import dev.boudy04.taskvault.settings.OWNER_USERNAME
 import dev.boudy04.taskvault.settings.SettingsRepository
 import java.io.IOException
 import javax.inject.Inject
@@ -21,22 +19,22 @@ import kotlinx.coroutines.launch
 import retrofit2.HttpException
 
 data class LoginUiState(
-    val members: List<MemberDto> = emptyList(),
-    val membersFailed: Boolean = false,
-    /** Workspace-key entry expanded below the Administrator row. */
-    val adminExpanded: Boolean = false,
-    val workspaceKey: String = "",
-    /** Inline workspace-key rejection (401). */
+    val name: String = "",
+    val password: String = "",
+    /** Inline 422 rejection of the typed name. */
+    val nameError: Boolean = false,
+    /** Inline 401 rejection of a typed workspace key. */
     val keyError: Boolean = false,
-    /** Transient member-login failures surface as a snackbar. */
+    /** Transient connectivity failures surface as a snackbar. */
     @StringRes val snackbarRes: Int? = null,
     val busy: Boolean = false,
 )
 
 /**
- * Drives the identity picker. Members log in with one tap (username-only);
- * the administrator expands a masked workspace-key field. Success persists
- * token+role+username and session gating swaps to the task graph.
+ * Two-input login: a name alone logs in as (or auto-provisions) that member;
+ * typing the workspace key in the password field verifies as administrator.
+ * Success persists token+role+username, then resolves /api/members/me to store
+ * the workspace member id used by the "assigned to you" section.
  */
 @HiltViewModel
 class AuthViewModel @Inject constructor(
@@ -47,45 +45,38 @@ class AuthViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
-    init {
-        loadMembers()
+    fun updateName(value: String) {
+        _uiState.update { it.copy(name = value, nameError = false) }
     }
 
-    fun loadMembers() {
-        viewModelScope.launch {
-            try {
-                _uiState.update {
-                    // The workspace owner logs in via the key below, never as a member.
-                    it.copy(members = api.listMembers().filter { m -> m.username != OWNER_USERNAME }, membersFailed = false)
-                }
-            } catch (_: Exception) {
-                _uiState.update { it.copy(membersFailed = true) }
-            }
+    fun updatePassword(value: String) {
+        _uiState.update { it.copy(password = value, keyError = false) }
+    }
+
+    fun enter() {
+        val state = _uiState.value
+        if (state.busy) return
+        if (state.password.isBlank()) {
+            loginMember(state.name.trim())
+        } else {
+            verifyAdmin(state.password)
         }
     }
 
-    fun toggleAdmin(expanded: Boolean) {
-        _uiState.update { it.copy(adminExpanded = expanded, keyError = false) }
-    }
-
-    fun updateWorkspaceKey(value: String) {
-        _uiState.update { it.copy(workspaceKey = value, keyError = false) }
-    }
-
-    fun loginAs(member: MemberDto) {
-        if (_uiState.value.busy) return
+    private fun loginMember(name: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(busy = true, snackbarRes = null) }
             try {
-                val resp = api.membersLogin(MemberLoginRequest(member.username))
+                val resp = api.membersLogin(MemberLoginRequest(name))
+                // Store first so membersMe goes out carrying the fresh token.
                 settings.setSession(resp.token, resp.role, resp.username)
+                settings.setUserId(api.membersMe().id)
             } catch (e: HttpException) {
-                @StringRes val res = if (e.code() == HTTP_NOT_FOUND) {
-                    R.string.login_error_unknown_member
+                if (e.code() == HTTP_UNPROCESSABLE) {
+                    _uiState.update { it.copy(nameError = true) }
                 } else {
-                    R.string.login_error_offline
+                    _uiState.update { it.copy(snackbarRes = R.string.login_error_offline) }
                 }
-                _uiState.update { it.copy(snackbarRes = res) }
             } catch (e: IOException) {
                 _uiState.update { it.copy(snackbarRes = R.string.login_error_offline) }
             } finally {
@@ -94,14 +85,13 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    fun verifyAdmin() {
-        val key = _uiState.value.workspaceKey.trim()
-        if (_uiState.value.busy || key.isEmpty()) return
+    private fun verifyAdmin(key: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(busy = true, keyError = false) }
             try {
                 val me = api.adminVerify(AdminVerifyRequest(key))
                 settings.setSession(key, me.role, me.username)
+                settings.setUserId(me.id)
             } catch (e: HttpException) {
                 _uiState.update { it.copy(keyError = true) }
             } catch (e: IOException) {
@@ -117,6 +107,6 @@ class AuthViewModel @Inject constructor(
     }
 
     private companion object {
-        const val HTTP_NOT_FOUND = 404
+        const val HTTP_UNPROCESSABLE = 422
     }
 }

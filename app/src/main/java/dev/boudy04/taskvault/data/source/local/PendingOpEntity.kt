@@ -3,7 +3,8 @@ package dev.boudy04.taskvault.data.source.local
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-enum class PendingOpType { CREATE, UPDATE, DELETE }
+/** STATUS = status-only PUT (the only write shape assignees may send). */
+enum class PendingOpType { CREATE, UPDATE, DELETE, STATUS }
 enum class PendingOpState { PENDING, RUNNING }
 
 @Entity(tableName = "pending_ops")

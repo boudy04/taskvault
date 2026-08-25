@@ -59,6 +59,9 @@ class AddEditTaskViewModel @Inject constructor(
 
     private val taskId: String? = savedStateHandle[TodoDestinationsArgs.TASK_ID_ARG]
 
+    /** New tasks created from the Personal tab are LOCAL-ONLY. */
+    val isPersonal: Boolean = savedStateHandle[TodoDestinationsArgs.IS_PERSONAL_ARG] ?: false
+
     // A MutableStateFlow needs to be created in this ViewModel. The source of truth of the current
     // editable Task is the ViewModel, we need to mutate the UI state directly in methods such as
     // `updateTitle` or `updateDescription`
@@ -198,6 +201,7 @@ class AddEditTaskViewModel @Inject constructor(
             _dueAt.value,
             _tags.value,
             _assigneeIds.value,
+            isPersonal,
         )
         _uiState.update {
             it.copy(isTaskSaved = true)

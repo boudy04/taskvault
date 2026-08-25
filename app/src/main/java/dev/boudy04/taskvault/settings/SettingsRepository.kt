@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -12,8 +13,14 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
-/** Who is signed in; blank token = nobody (identity picker shows). */
-data class Session(val token: String = "", val role: String = "", val username: String = "") {
+/** Who is signed in; blank token = nobody (two-input login shows). */
+data class Session(
+    val token: String = "",
+    val role: String = "",
+    val username: String = "",
+    /** Workspace member id from /api/members/me; drives the "assigned to you" section. */
+    val userId: Int = 0,
+) {
     /** Member sessions are view-only; the UI mirrors what the server enforces. */
     val isMember: Boolean get() = role == MEMBER_ROLE
 
@@ -32,13 +39,15 @@ interface SettingsRepository {
     suspend fun current(): ServerConfig
     suspend fun setConfig(config: ServerConfig)
     suspend fun setSession(token: String, role: String, username: String)
+    /** Resolves and stores the workspace member id after a successful login. */
+    suspend fun setUserId(id: Int)
     suspend fun clearSession()
     suspend fun setThemeMode(mode: ThemeMode)
     suspend fun setFontFamily(family: String)
     suspend fun setAppLock(enabled: Boolean)
 }
 
-private const val DEFAULT_URL = "http://10.0.2.2:8000"
+private const val DEFAULT_URL = "https://prject-cv-production.up.railway.app"
 private const val DEFAULT_TOKEN = ""
 
 @Singleton
@@ -51,6 +60,7 @@ class DataStoreSettingsRepository @Inject constructor(
         val token = stringPreferencesKey("auth_token")
         val role = stringPreferencesKey("auth_role")
         val username = stringPreferencesKey("auth_username")
+        val userId = intPreferencesKey("username_id")
         val themeMode = stringPreferencesKey("theme_mode")
         val fontFamily = stringPreferencesKey("font_family")
         val appLock = booleanPreferencesKey("app_lock")
@@ -62,6 +72,7 @@ class DataStoreSettingsRepository @Inject constructor(
             token = p[Keys.token] ?: DEFAULT_TOKEN,
             role = p[Keys.role] ?: "",
             username = p[Keys.username] ?: "",
+            userId = p[Keys.userId] ?: 0,
         )
     }
     override val config: Flow<ServerConfig> = dataStore.data.map { p ->
@@ -90,11 +101,18 @@ class DataStoreSettingsRepository @Inject constructor(
         }
     }
 
+
+    override suspend fun setUserId(id: Int) {
+        dataStore.edit { p ->
+            p[Keys.userId] = id
+        }
+    }
     override suspend fun clearSession() {
         dataStore.edit { p ->
             p.remove(Keys.token)
             p.remove(Keys.role)
             p.remove(Keys.username)
+            p.remove(Keys.userId)
         }
     }
 

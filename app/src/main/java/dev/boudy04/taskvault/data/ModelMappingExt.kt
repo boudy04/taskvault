@@ -18,6 +18,7 @@ package dev.boudy04.taskvault.data
 
 import dev.boudy04.taskvault.data.source.local.LocalTask
 import dev.boudy04.taskvault.data.source.network.TaskDto
+import dev.boudy04.taskvault.data.source.network.NoteDto
 import dev.boudy04.taskvault.data.source.network.toTaskPriority
 import dev.boudy04.taskvault.data.source.network.toTaskStatus
 import dev.boudy04.taskvault.sync.TaskPayload
@@ -61,6 +62,8 @@ fun LocalTask.toExternal() = Task(
     tags = parseTags(tags),
     assigneeIds = parseIds(assigneeIds),
     createdAt = createdAt,
+    isPersonal = isPersonal,
+    notes = parseNotes(notes),
 )
 
 // Note: JvmName is used to provide a unique name for each extension function with the same name.
@@ -92,6 +95,7 @@ fun LocalTask.copyFromDto(dto: TaskDto) = copy(
     dueAt = dto.dueAt,
     tags = joinTags(dto.tags),
     assigneeIds = joinIds(dto.assignees.map { it.id }),
+    notes = joinNotes(dto.notes),
 )
 
 /** Canonicalizes tags (trim, lowercase, dedupe, drop empties) into the stored column form. */
@@ -116,3 +120,15 @@ fun parseIds(column: String): List<Int> =
     } else {
         column.split(',').mapNotNull { it.trim().toIntOrNull() }
     }
+
+// ponytail: module-level Json for the notes column; injected Json would ripple through every mapper caller
+private val notesJson = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+
+/** Encodes server notes into the stored JSON column form. */
+fun joinNotes(notes: List<NoteDto>): String = notesJson.encodeToString(notes)
+
+/** Parses the stored notes column; unreadable JSON degrades to no notes. */
+fun parseNotes(column: String): List<TaskNote> =
+    runCatching {
+        notesJson.decodeFromString<List<NoteDto>>(column).map { TaskNote(it.author, it.body, it.createdAt) }
+    }.getOrDefault(emptyList())

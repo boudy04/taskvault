@@ -30,4 +30,16 @@ object DueDates {
     /** The default pick time when no due is set yet: the next full hour. */
     fun nextFullHour(now: LocalDateTime = LocalDateTime.now()): LocalDateTime =
         now.plusHours(1).truncatedTo(ChronoUnit.HOURS)
+
+    /** Coarse relative stamp for note timestamps: "3m", "5h", "2d" ago; falls back to empty. */
+    fun relative(isoUtc: String?): String {
+        val instant = runCatching { Instant.parse(isoUtc ?: return "") }.getOrNull() ?: return ""
+        val minutes = ChronoUnit.MINUTES.between(instant, Instant.now())
+        return when {
+            minutes < 1 -> "now"
+            minutes < 60 -> "${minutes}m"
+            minutes < 1440 -> "${minutes / 60}h"
+            else -> "${minutes / 1440}d"
+        }
+    }
 }

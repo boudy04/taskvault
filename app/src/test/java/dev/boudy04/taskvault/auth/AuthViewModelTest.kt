@@ -12,8 +12,10 @@ import dev.boudy04.taskvault.data.source.network.MemberDto
 import dev.boudy04.taskvault.data.source.network.MemberLoginRequest
 import dev.boudy04.taskvault.data.source.network.MemberLoginResponse
 import dev.boudy04.taskvault.data.source.network.MemberRequest
+import dev.boudy04.taskvault.data.source.network.NoteRequest
 import dev.boudy04.taskvault.data.source.network.TaskApiService
 import dev.boudy04.taskvault.data.source.network.TaskDto
+import dev.boudy04.taskvault.data.source.network.TaskStatusUpdate
 import dev.boudy04.taskvault.settings.FakeSettingsRepository
 import java.io.IOException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -30,11 +32,12 @@ import retrofit2.Response
 private class FakeApi(
     var memberError: Exception? = null,
     var verifyError: Exception? = null,
+    var meError: Exception? = null,
 ) : TaskApiService {
 
     override suspend fun listMembers(): List<MemberDto> =
         listOf(MemberDto(1, "boudy04"), MemberDto(2, "alice"), MemberDto(3, "bob"))
-    
+
     override suspend fun membersLogin(body: MemberLoginRequest): MemberLoginResponse {
         memberError?.let { throw it }
         return MemberLoginResponse("member-token", "member", body.username)
@@ -45,7 +48,13 @@ private class FakeApi(
         return MeResponse(1, "boudy04", "admin")
     }
 
-    override suspend fun membersMe() = MeResponse(1, "x", "member")
+    override suspend fun membersMe(): MeResponse {
+        meError?.let { throw it }
+        return MeResponse(7, "alice", "member")
+    }
+
+    override suspend fun addNote(id: Int, body: NoteRequest) = Response.success(Unit)
+    override suspend fun updateTaskStatus(id: Int, body: TaskStatusUpdate) = TaskDto(id = id)
 
     override suspend fun register(body: AuthRequest) = AuthResponse("")
     override suspend fun login(body: AuthRequest) = AuthResponse("")
@@ -79,89 +88,54 @@ class AuthViewModelTest {
     }
 
     @Test
-    fun loadsWorkspaceMembersForPicker() = runTest {
-        advanceUntilIdle()
-        // The workspace owner is excluded; he signs in via the key.
-        assertThat(viewModel.uiState.value.members.map { it.username })
-            .containsExactly("alice", "bob")
-        assertThat(viewModel.uiState.value.membersFailed).isFalse()
-    }
+    fun enter_blankPassword_logsInAsMember_storesTokenRoleUsernameAndId() = runTest {
+        viewModel.updateName("alice")
 
-    @Test
-    fun loadMembersFailure_flagsRetryState() = runTest {
-        // The picker degrades to the Administrator row + retry when offline.
-        val failingApi = FakeApi().apply { }
-        val broken = object : TaskApiService by failingApi {
-            override suspend fun listMembers(): List<MemberDto> = throw IOException("offline")
-        }
-        viewModel = AuthViewModel(broken, settings)
-
-        advanceUntilIdle()
-        assertThat(viewModel.uiState.value.members).isEmpty()
-        assertThat(viewModel.uiState.value.membersFailed).isTrue()
-    }
-
-    @Test
-    fun memberLogin_success_storesTokenRoleUsername() = runTest {
-        advanceUntilIdle()
-
-        viewModel.loginAs(MemberDto(2, "alice"))
+        viewModel.enter()
         advanceUntilIdle()
 
         assertThat(settings.sessionToken).isEqualTo("member-token")
         assertThat(settings.sessionRole).isEqualTo("member")
         assertThat(settings.sessionUsername).isEqualTo("alice")
+        // /api/members/me resolved and stored the workspace id.
+        assertThat(settings.sessionUserId).isEqualTo(7)
+        assertThat(viewModel.uiState.value.nameError).isFalse()
+        assertThat(viewModel.uiState.value.keyError).isFalse()
     }
 
     @Test
-    fun memberLogin_unknownMember_maps404ToSnackbar() = runTest {
-        advanceUntilIdle()
-        api.memberError = httpException(404)
+    fun enter_filledPassword_verifiesAdmin_storesKeyAndIdentity() = runTest {
+        viewModel.updateName("ignored")
+        viewModel.updatePassword("dev-token")
 
-        viewModel.loginAs(MemberDto(2, "alice"))
-        advanceUntilIdle()
-
-        assertThat(viewModel.uiState.value.snackbarRes)
-            .isEqualTo(R.string.login_error_unknown_member)
-        // No session was stored.
-        assertThat(settings.sessionToken).isEmpty()
-    }
-
-    @Test
-    fun memberLogin_offline_mapsIoExceptionToOfflineMessage() = runTest {
-        advanceUntilIdle()
-        api.memberError = IOException("airplane mode")
-
-        viewModel.loginAs(MemberDto(2, "alice"))
-        advanceUntilIdle()
-
-        @StringRes val res = viewModel.uiState.value.snackbarRes
-        assertThat(res).isEqualTo(R.string.login_error_offline)
-    }
-
-    @Test
-    fun adminVerify_correctKey_storesAdminSession() = runTest {
-        advanceUntilIdle()
-        viewModel.toggleAdmin(true)
-        viewModel.updateWorkspaceKey("dev-token")
-
-        viewModel.verifyAdmin()
+        viewModel.enter()
         advanceUntilIdle()
 
         assertThat(settings.sessionToken).isEqualTo("dev-token")
         assertThat(settings.sessionRole).isEqualTo("admin")
         assertThat(settings.sessionUsername).isEqualTo("boudy04")
+        assertThat(settings.sessionUserId).isEqualTo(1)
         assertThat(viewModel.uiState.value.keyError).isFalse()
     }
 
     @Test
-    fun adminVerify_wrongKey_setsInlineErrorWithoutSession() = runTest {
-        advanceUntilIdle()
-        api.verifyError = httpException(401)
-        viewModel.toggleAdmin(true)
-        viewModel.updateWorkspaceKey("nope")
+    fun enter_invalidName_422_setsInlineNameErrorWithoutSession() = runTest {
+        api.memberError = httpException(422)
+        viewModel.updateName("!!")
 
-        viewModel.verifyAdmin()
+        viewModel.enter()
+        advanceUntilIdle()
+
+        assertThat(viewModel.uiState.value.nameError).isTrue()
+        assertThat(settings.sessionToken).isEmpty()
+    }
+
+    @Test
+    fun enter_wrongWorkspaceKey_401_setsInlineErrorWithoutSession() = runTest {
+        api.verifyError = httpException(401)
+        viewModel.updatePassword("nope")
+
+        viewModel.enter()
         advanceUntilIdle()
 
         assertThat(viewModel.uiState.value.keyError).isTrue()
@@ -169,28 +143,66 @@ class AuthViewModelTest {
     }
 
     @Test
-    fun adminVerify_offline_surfacesOfflineSnackbar() = runTest {
+    fun enter_memberLoginOffline_mapsIoExceptionToOfflineMessage() = runTest {
+        api.memberError = IOException("airplane mode")
+        viewModel.updateName("alice")
+
+        viewModel.enter()
         advanceUntilIdle()
+
+        assertSnackbarIs(R.string.login_error_offline)
+        assertThat(settings.sessionToken).isEmpty()
+    }
+
+    @Test
+    fun enter_adminVerifyOffline_surfacesOfflineSnackbar() = runTest {
         api.verifyError = IOException("offline")
-        viewModel.toggleAdmin(true)
-        viewModel.updateWorkspaceKey("dev-token")
+        viewModel.updatePassword("dev-token")
 
-        viewModel.verifyAdmin()
+        viewModel.enter()
         advanceUntilIdle()
 
-        assertThat(viewModel.uiState.value.snackbarRes)
-            .isEqualTo(R.string.login_error_offline)
+        assertSnackbarIs(R.string.login_error_offline)
+    }
+
+    @Test
+    fun typingAgain_clearsInlineErrors() = runTest {
+        api.memberError = httpException(422)
+        viewModel.updateName("!!")
+        viewModel.enter()
+        advanceUntilIdle()
+
+        viewModel.updateName("ok-name")
+        viewModel.updatePassword("key")
+
+        assertThat(viewModel.uiState.value.nameError).isFalse()
+        assertThat(viewModel.uiState.value.keyError).isFalse()
     }
 
     @Test
     fun snackbarShown_clearsMessage() = runTest {
-        advanceUntilIdle()
-        api.memberError = httpException(404)
-        viewModel.loginAs(MemberDto(2, "alice"))
+        api.memberError = IOException("offline")
+        viewModel.updateName("alice")
+        viewModel.enter()
         advanceUntilIdle()
 
         viewModel.snackbarShown()
 
         assertThat(viewModel.uiState.value.snackbarRes).isNull()
+    }
+
+    @Test
+    fun busy_guard_blocksDoubleEnter() = runTest {
+        viewModel.updateName("alice")
+        viewModel.enter()
+        // Second tap while the first is in flight must not crash or double-store.
+        viewModel.enter()
+        advanceUntilIdle()
+
+        assertThat(settings.sessionUsername).isEqualTo("alice")
+    }
+
+    private fun assertSnackbarIs(@StringRes expected: Int) {
+        assertThat(viewModel.uiState.value.snackbarRes).isEqualTo(expected)
     }
 }

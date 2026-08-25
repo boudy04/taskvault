@@ -152,7 +152,7 @@ fun AddEditTaskScreen(
             assigneeIds = assigneeIds,
             onToggleAssignee = viewModel::toggleAssignee,
             onAssigneesSheetOpened = viewModel::reloadMembers,
-            hideAssignees = isMember,
+            hideAssignees = isMember || viewModel.isPersonal,
             modifier = Modifier.padding(paddingValues)
         )
 

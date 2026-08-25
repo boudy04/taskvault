@@ -18,6 +18,7 @@ package dev.boudy04.taskvault
 
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
+import dev.boudy04.taskvault.TodoDestinationsArgs.IS_PERSONAL_ARG
 import dev.boudy04.taskvault.TodoDestinationsArgs.TASK_ID_ARG
 import dev.boudy04.taskvault.TodoDestinationsArgs.TITLE_ARG
 import dev.boudy04.taskvault.TodoDestinationsArgs.USER_MESSAGE_ARG
@@ -45,6 +46,7 @@ object TodoDestinationsArgs {
     const val USER_MESSAGE_ARG = "userMessage"
     const val TASK_ID_ARG = "taskId"
     const val TITLE_ARG = "title"
+    const val IS_PERSONAL_ARG = "isPersonal"
 }
 
 /**
@@ -54,7 +56,7 @@ object TodoDestinations {
     const val TASKS_ROUTE = "$TASKS_SCREEN?$USER_MESSAGE_ARG={$USER_MESSAGE_ARG}"
     const val STATISTICS_ROUTE = STATISTICS_SCREEN
     const val TASK_DETAIL_ROUTE = "$TASK_DETAIL_SCREEN/{$TASK_ID_ARG}"
-    const val ADD_EDIT_TASK_ROUTE = "$ADD_EDIT_TASK_SCREEN/{$TITLE_ARG}?$TASK_ID_ARG={$TASK_ID_ARG}"
+    const val ADD_EDIT_TASK_ROUTE = "$ADD_EDIT_TASK_SCREEN/{$TITLE_ARG}?$TASK_ID_ARG={$TASK_ID_ARG}?$IS_PERSONAL_ARG={$IS_PERSONAL_ARG}"
     const val SETTINGS_ROUTE = SETTINGS_SCREEN
 }
 
@@ -99,10 +101,12 @@ class TodoNavigationActions(private val navController: NavHostController) {
         navController.navigate("$TASK_DETAIL_SCREEN/$taskId")
     }
 
-    fun navigateToAddEditTask(title: Int, taskId: String?) {
+    fun navigateToAddEditTask(title: Int, taskId: String?, isPersonal: Boolean = false) {
         navController.navigate(
             "$ADD_EDIT_TASK_SCREEN/$title".let {
                 if (taskId != null) "$it?$TASK_ID_ARG=$taskId" else it
+            }.let {
+                if (isPersonal) "$it?$IS_PERSONAL_ARG=true" else it
             }
         )
     }

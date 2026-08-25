@@ -25,6 +25,21 @@ import dev.boudy04.taskvault.data.source.local.PendingOpType
 import dev.boudy04.taskvault.sync.ReminderScheduler
 import dev.boudy04.taskvault.sync.SyncScheduler
 import dev.boudy04.taskvault.sync.TaskPayload
+import dev.boudy04.taskvault.data.source.network.AdminVerifyRequest
+import dev.boudy04.taskvault.data.source.network.AuthRequest
+import dev.boudy04.taskvault.data.source.network.AuthResponse
+import dev.boudy04.taskvault.data.source.network.MeResponse
+import dev.boudy04.taskvault.data.source.network.MemberDto
+import dev.boudy04.taskvault.data.source.network.MemberLoginRequest
+import dev.boudy04.taskvault.data.source.network.MemberLoginResponse
+import dev.boudy04.taskvault.data.source.network.MemberRequest
+import dev.boudy04.taskvault.data.source.network.NoteRequest
+import dev.boudy04.taskvault.data.source.network.TaskApiService
+import dev.boudy04.taskvault.data.source.network.TaskDto
+import dev.boudy04.taskvault.settings.FakeSettingsRepository
+import dev.boudy04.taskvault.data.source.network.TaskStatusUpdate
+import dev.boudy04.taskvault.settings.Session
+import retrofit2.Response
 import java.time.Instant
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -73,19 +88,47 @@ class OfflineFirstRepositoryTest {
 
     private fun repoWithFakes(
         seedTasks: List<LocalTask> = emptyList(),
+        memberSession: Boolean = false,
     ): DefaultTaskRepository {
         fakeTaskDao = FakeTaskDao(seedTasks)
         fakePendingOps = FakePendingOpDao()
         syncRequests = RecordingSyncScheduler()
         reminders = RecordingReminderScheduler()
+        val settings = FakeSettingsRepository(
+            initialToken = "tok",
+            initialRole = if (memberSession) Session.MEMBER_ROLE else "admin",
+            initialUsername = "tester",
+        )
         return DefaultTaskRepository(
             localDataSource = fakeTaskDao,
             pendingOps = fakePendingOps,
             syncScheduler = syncRequests,
             reminders = reminders,
+            api = RecordingApi(),
+            settings = settings,
             json = json,
             dispatcher = StandardTestDispatcher(mainDispatcherRule.testDispatcher.scheduler),
         )
+    }
+
+    /** Empty API stub: the repository only touches it from addNote. */
+    private class RecordingApi : TaskApiService {
+        override suspend fun addNote(id: Int, body: NoteRequest) = Response.success(Unit)
+        override suspend fun updateTaskStatus(id: Int, body: TaskStatusUpdate) = TaskDto(id = id)
+        override suspend fun register(body: AuthRequest) = AuthResponse("")
+        override suspend fun login(body: AuthRequest) = AuthResponse("")
+        override suspend fun listTasks(status: String?) = emptyList<TaskDto>()
+        override suspend fun getTask(id: Int) = TaskDto(id = id)
+        override suspend fun createTask(task: TaskDto) = task
+        override suspend fun updateTask(id: Int, task: TaskDto) = task
+        override suspend fun deleteTask(id: Int) = Response.success(Unit)
+        override suspend fun listMembers() = emptyList<MemberDto>()
+        override suspend fun createMember(body: MemberRequest) = MemberDto(9, body.username)
+        override suspend fun deleteMember(id: Int) = Response.success(Unit)
+        override suspend fun membersLogin(body: MemberLoginRequest) =
+            MemberLoginResponse("t", "member", body.username)
+        override suspend fun adminVerify(body: AdminVerifyRequest) = MeResponse(1, "x", "admin")
+        override suspend fun membersMe() = MeResponse(1, "x", "member")
     }
 
     private fun futureIso(): String = Instant.now().plusSeconds(3600).toString()
@@ -287,4 +330,65 @@ class OfflineFirstRepositoryTest {
         assertEquals(listOf("due-1"), reminders.cancelled)
     }
 
+
+    // ---------- Task 33: LOCAL-ONLY personal path + member status-only ops ----------
+
+    @Test
+    fun createPersonalTask_writesRow_neverEnqueuesOrRequestsSync() = runTest {
+        val repo = repoWithFakes()
+        val id = repo.createTask("Diary", "private", TaskPriority.LOW, null, emptyList(), emptyList(), isPersonal = true)
+
+        assertEquals("Diary", fakeTaskDao.getById(id)!!.title)
+        assertEquals(true, fakeTaskDao.getById(id)!!.isPersonal)
+        assertEquals(0, fakePendingOps.getAll().size)
+        assertEquals(0, syncRequests.requests.size)
+    }
+
+    @Test
+    fun personalTask_editCompleteDelete_stayLocalOnly() = runTest {
+        val seeded = LocalTask(
+            id = "p-1", title = "Personal", description = "d",
+            isCompleted = false, isPersonal = true,
+        )
+        val repo = repoWithFakes(seedTasks = listOf(seeded))
+
+        repo.updateTask("p-1", "Renamed", "d2", TaskPriority.HIGH, null)
+        repo.completeTask("p-1")
+        repo.deleteTask("p-1")
+
+        assertNull(fakeTaskDao.getById("p-1"))
+        assertEquals(0, fakePendingOps.getAll().size)
+        assertEquals(0, syncRequests.requests.size)
+    }
+
+    @Test
+    fun memberComplete_enqueuesStatusOnlyOp() = runTest {
+        val seeded = LocalTask(
+            id = "a-1", title = "Assigned", description = "d",
+            isCompleted = false, serverId = 31,
+        )
+        val repo = repoWithFakes(seedTasks = listOf(seeded), memberSession = true)
+
+        repo.completeTask("a-1")
+
+        val op = fakePendingOps.getAll().single()
+        assertEquals(PendingOpType.STATUS, op.opType)
+        val payload = json.decodeFromString<TaskPayload>(op.payload)
+        // The wire body built from this payload carries ONLY the status field.
+        assertEquals("done", payload.status)
+    }
+
+    @Test
+    fun adminComplete_enqueuesFullUpdateOp() = runTest {
+        val seeded = LocalTask(
+            id = "a-2", title = "Team", description = "d",
+            isCompleted = false, serverId = 32,
+        )
+        val repo = repoWithFakes(seedTasks = listOf(seeded))
+
+        repo.completeTask("a-2")
+
+        val op = fakePendingOps.getAll().single()
+        assertEquals(PendingOpType.UPDATE, op.opType)
+    }
 }

@@ -24,6 +24,7 @@ import dev.boudy04.taskvault.DELETE_RESULT_OK
 import dev.boudy04.taskvault.EDIT_RESULT_OK
 import dev.boudy04.taskvault.R
 import dev.boudy04.taskvault.data.GROUP_PRESETS
+import dev.boudy04.taskvault.data.NoteResult
 import dev.boudy04.taskvault.data.Task
 import dev.boudy04.taskvault.data.TaskRepository
 import dev.boudy04.taskvault.data.source.network.MemberDto
@@ -49,9 +50,9 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
- * UiState for the task list screen (UX v2). [items] backs the Team section
- * (every task matching the filters); [personalItems] is the Personal subset
- * (zero assignees).
+ * UiState for the task list screen (UX v3). [items] backs the Team tab
+ * (non-personal tasks matching the filters); [personalItems] is the
+ * LOCAL-ONLY Personal subset. Team subsections derive from [sessionUserId].
  */
 data class TasksUiState(
     val items: List<Task> = emptyList(),
@@ -70,18 +71,26 @@ data class TasksUiState(
     /** The Status menu mirrors the top-bar/drawer filter (they are one setting). */
     val statusFilter: TasksFilterType = ALL_TASKS,
     val sort: TasksSort = TasksSort.NEAREST_DUE,
-    /** Member sessions are view-only: banner shows, FAB hides, checkboxes disable. */
+    /** Consolidated Filters sheet visibility. */
+    val filtersOpen: Boolean = false,
+    /** How many of group/person/status/sort/search are actively narrowing. */
+    val activeFilterCount: Int = 0,
+    /** Member sessions toggle status only on their own assigned tasks. */
     val isMember: Boolean = false,
     val sessionUsername: String = "",
+    val sessionUserId: Int = 0,
 )
 
-/** Everything the filter bar can set, held together so combine stays within 5 flows. */
+/** Everything the Filters sheet can set, held together so combine stays within 5 flows. */
 private data class FilterState(
     val query: String = "",
     val group: String? = null,
     val person: Int? = null,
     val sort: TasksSort = TasksSort.NEAREST_DUE,
 )
+
+/** Team + personal lists after the shared filter pipeline; error carries a string res. */
+private data class TaskLists(val team: List<Task>, val personal: List<Task>, val errorRes: Int? = null)
 
 /**
  * ViewModel for the task list screen.
@@ -101,6 +110,7 @@ class TasksViewModel @Inject constructor(
     private val _filterUiInfo = _savedFilterType.map { getFilterUiInfo(it) }.distinctUntilChanged()
     private val _userMessage: MutableStateFlow<Int?> = MutableStateFlow(null)
     private val _isLoading = MutableStateFlow(false)
+    private val _filtersOpen = MutableStateFlow(false)
 
     private val _filterState = MutableStateFlow(FilterState())
 
@@ -146,6 +156,19 @@ class TasksViewModel @Inject constructor(
         _filterState.value = _filterState.value.copy(sort = sort)
     }
 
+    fun openFilters() {
+        _filtersOpen.value = true
+    }
+
+    fun closeFilters() {
+        _filtersOpen.value = false
+    }
+
+    fun resetFilters() {
+        _filterState.value = FilterState()
+        setFiltering(ALL_TASKS)
+    }
+
     private data class ListExtras(
         val pendingSyncIds: Set<String> = emptySet(),
         val availableTags: List<String> = emptyList(),
@@ -157,24 +180,28 @@ class TasksViewModel @Inject constructor(
         val statusFilter: TasksFilterType = ALL_TASKS,
         val isMember: Boolean = false,
         val sessionUsername: String = "",
+        val sessionUserId: Int = 0,
+        val filtersOpen: Boolean = false,
+        val activeFilterCount: Int = 0,
     )
 
     private val _extras: Flow<ListExtras> = combine(
         _session,
         _members,
+        _filtersOpen,
+        _filterState,
         combine(
             taskRepository.getPendingSyncIdsStream(),
             // Errors surface through the main list pipeline; the group menu degrades silently.
             taskRepository.getTasksStream()
                 .map { tasks -> tasks.flatMap { it.tags }.distinct().sorted() }
                 .catch { emit(emptyList()) },
-            _filterState,
             _savedFilterType,
-        ) { pending, tags, filterState, statusType ->
-            Triple(pending, tags, filterState to statusType)
+        ) { pending, tags, statusType ->
+            Triple(pending, tags, statusType)
         },
-    ) { session, members, (pending, tags, filterAndStatus) ->
-        val (query, group, person, sort) = filterAndStatus.first
+    ) { session, members, filtersOpen, filterState, (pending, tags, statusType) ->
+        val (query, group, person, sort) = filterState
         ListExtras(
             pendingSyncIds = pending,
             availableTags = tags,
@@ -183,43 +210,57 @@ class TasksViewModel @Inject constructor(
             person = person,
             sort = sort,
             members = members,
-            statusFilter = filterAndStatus.second,
+            statusFilter = statusType,
             isMember = session.isMember,
             sessionUsername = session.username,
+            sessionUserId = session.userId,
+            filtersOpen = filtersOpen,
+            activeFilterCount = listOfNotNull(
+                if (query.isNotBlank()) Unit else null,
+                if (group != null) Unit else null,
+                if (person != null) Unit else null,
+                if (sort != TasksSort.NEAREST_DUE) Unit else null,
+                if (statusType != ALL_TASKS) Unit else null,
+            ).size,
         )
     }
 
-    private val _filteredTasksAsync =
+    /** One pass over the repo stream splits personal vs team, then applies all filters. */
+    private val _taskListsAsync =
         combine(
             taskRepository.getTasksStream(),
             _savedFilterType,
             _filterState,
-        ) { tasks, type, filterState ->
-            var result = filterTasks(tasks, type)
-            if (filterState.group != null) result = result.filter { filterState.group in it.tags }
+        ) { allTasks, type, filterState ->
+            var team = filterTasks(allTasks.filterNot { it.isPersonal }, type)
+            var personal = filterTasks(allTasks.filter { it.isPersonal }, type)
+            if (filterState.group != null) {
+                team = team.filter { filterState.group in it.tags }
+                personal = personal.filter { filterState.group in it.tags }
+            }
             when (val person = filterState.person) {
-                PERSON_UNASSIGNED -> result = result.filter { it.assigneeIds.isEmpty() }
+                PERSON_UNASSIGNED -> team = team.filter { it.assigneeIds.isEmpty() }
                 null -> {}
-                else -> result = result.filter { person in it.assigneeIds }
+                else -> team = team.filter { person in it.assigneeIds }
             }
-            sortTasks(result.filter { matchesQuery(it, filterState.query) }, filterState.sort)
+            TaskLists(
+                team = sortTasks(team.filter { matchesQuery(it, filterState.query) }, filterState.sort),
+                personal = sortTasks(personal.filter { matchesQuery(it, filterState.query) }, filterState.sort),
+            )
         }
-            .map<List<Task>, Pair<List<Task>, Int?>> { it to null }
-            .catch<Pair<List<Task>, Int?>> {
-                emit(emptyList<Task>() to R.string.loading_tasks_error)
-            }
+            .map<TaskLists, TaskLists> { it }
+            .catch<TaskLists> { emit(TaskLists(emptyList(), emptyList(), R.string.loading_tasks_error)) }
 
     val uiState: StateFlow<TasksUiState> = combine(
-        _filterUiInfo, _isLoading, _userMessage, _filteredTasksAsync, _extras
-    ) { filterUiInfo, isLoading, userMessage, tasksResult, extras ->
-        val (tasks, errorRes) = tasksResult
+        _filterUiInfo, _isLoading, _userMessage, _taskListsAsync, _extras
+    ) { filterUiInfo, isLoading, userMessage, lists, extras ->
         TasksUiState(
-            items = tasks,
-            personalItems = tasks.filter { it.assigneeIds.isEmpty() },
+            items = lists.team,
+            personalItems = lists.personal,
             pendingSyncIds = extras.pendingSyncIds,
             filteringUiInfo = filterUiInfo,
             isLoading = isLoading,
-            userMessage = errorRes ?: userMessage,
+            userMessage = lists.errorRes ?: userMessage,
             availableGroups = (GROUP_PRESETS + extras.availableTags).distinct().sorted(),
             members = extras.members,
             searchQuery = extras.query,
@@ -227,8 +268,11 @@ class TasksViewModel @Inject constructor(
             personFilter = extras.person,
             statusFilter = extras.statusFilter,
             sort = extras.sort,
+            filtersOpen = extras.filtersOpen,
+            activeFilterCount = extras.activeFilterCount,
             isMember = extras.isMember,
             sessionUsername = extras.sessionUsername,
+            sessionUserId = extras.sessionUserId,
         )
     }
         .stateIn(
@@ -256,6 +300,14 @@ class TasksViewModel @Inject constructor(
         } else {
             taskRepository.activateTask(task.id)
             showSnackbarMessage(R.string.task_marked_active)
+        }
+    }
+
+    fun addNote(task: Task, body: String) = viewModelScope.launch {
+        when (taskRepository.addNote(task.id, body)) {
+            NoteResult.ADDED -> Unit // pull already picked the new note up
+            NoteResult.FORBIDDEN -> showSnackbarMessage(R.string.note_error_forbidden)
+            NoteResult.FAILED -> showSnackbarMessage(R.string.login_error_offline)
         }
     }
 

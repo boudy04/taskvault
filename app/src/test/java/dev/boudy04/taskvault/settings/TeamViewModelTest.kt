@@ -1,4 +1,4 @@
-package dev.boudy04.taskvault.settings
+﻿package dev.boudy04.taskvault.settings
 
 import com.google.common.truth.Truth.assertThat
 import dev.boudy04.taskvault.MainCoroutineRule
@@ -7,12 +7,14 @@ import dev.boudy04.taskvault.data.source.network.AuthRequest
 import dev.boudy04.taskvault.data.source.network.AuthResponse
 import dev.boudy04.taskvault.data.source.network.MemberDto
 import dev.boudy04.taskvault.data.source.network.MemberRequest
+import dev.boudy04.taskvault.data.source.network.NoteRequest
 import dev.boudy04.taskvault.data.source.network.AdminVerifyRequest
 import dev.boudy04.taskvault.data.source.network.MeResponse
 import dev.boudy04.taskvault.data.source.network.MemberLoginRequest
 import dev.boudy04.taskvault.data.source.network.MemberLoginResponse
 import dev.boudy04.taskvault.data.source.network.TaskApiService
 import dev.boudy04.taskvault.data.source.network.TaskDto
+import dev.boudy04.taskvault.data.source.network.TaskStatusUpdate
 import java.io.IOException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
@@ -72,7 +74,9 @@ private class FakeMemberApi(
     override suspend fun login(body: AuthRequest): AuthResponse = error("not used")
     override suspend fun membersLogin(body: MemberLoginRequest) = MemberLoginResponse("t", "member", body.username)
     override suspend fun adminVerify(body: AdminVerifyRequest) = MeResponse(1, "x", "admin")
-    override suspend fun membersMe() = MeResponse(1, "x", "member")
+        override suspend fun membersMe() = MeResponse(1, "x", "member")
+    override suspend fun addNote(id: Int, body: NoteRequest) = Response.success(Unit)
+    override suspend fun updateTaskStatus(id: Int, body: TaskStatusUpdate) = TaskDto(id = id)
 }
 
 @ExperimentalCoroutinesApi

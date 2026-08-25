@@ -23,12 +23,10 @@ class DataStoreSettingsRepositoryTest {
     )
 
     @Test
-    fun defaults_areLocalUvicornAndBlankToken() = runTest {
+    fun defaults_areRailwayAndBlankToken() = runTest {
         val r = repo(backgroundScope)
         val c = r.current()
-        // ponytail: T28 identity endpoints live only on the not-yet-deployed task-api branch;
-        // flip this default back to Railway when it ships.
-        assertEquals("http://10.0.2.2:8000", c.baseUrl)
+        assertEquals("https://prject-cv-production.up.railway.app", c.baseUrl)
         assertEquals("", c.token)
     }
 

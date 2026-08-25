@@ -55,12 +55,13 @@ import dev.boudy04.taskvault.R
 import dev.boudy04.taskvault.TodoTheme
 import dev.boudy04.taskvault.settings.ThemeMode
 
+/**
+ * Minimal tasks top bar: drawer menu, title, overflow. Clear/refresh/theme/settings
+ * live in the overflow so the bar keeps two icons total.
+ */
 @Composable
 fun TasksTopAppBar(
     openDrawer: () -> Unit,
-    onFilterAllTasks: () -> Unit,
-    onFilterActiveTasks: () -> Unit,
-    onFilterCompletedTasks: () -> Unit,
     onClearCompletedTasks: () -> Unit,
     onRefresh: () -> Unit,
     onSettingsClick: () -> Unit,
@@ -75,72 +76,33 @@ fun TasksTopAppBar(
             }
         },
         actions = {
-            FilterTasksMenu(onFilterAllTasks, onFilterActiveTasks, onFilterCompletedTasks)
-            MoreTasksMenu(onClearCompletedTasks, onRefresh)
-            IconButton(onClick = onToggleTheme) {
-                Icon(
-                    imageVector = when (themeMode) {
-                        ThemeMode.DARK -> Icons.Filled.DarkMode
-                        ThemeMode.LIGHT -> Icons.Filled.LightMode
-                        ThemeMode.SYSTEM -> Icons.Filled.BrightnessAuto
-                    },
-                    contentDescription = stringResource(id = R.string.cd_theme_toggle)
+            TopAppBarDropdownMenu(
+                iconContent = {
+                    Icon(Icons.Filled.MoreVert, stringResource(id = R.string.menu_more))
+                }
+            ) { closeMenu ->
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.menu_clear)) },
+                    onClick = { onClearCompletedTasks(); closeMenu() }
                 )
-            }
-            IconButton(onClick = onSettingsClick) {
-                Icon(Icons.Filled.Settings, stringResource(id = R.string.cd_settings))
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.refresh)) },
+                    onClick = { onRefresh(); closeMenu() }
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.cd_theme_toggle)) },
+                    onClick = { onToggleTheme(); closeMenu() }
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.cd_settings)) },
+                    onClick = { onSettingsClick(); closeMenu() }
+                )
             }
         },
         modifier = Modifier.fillMaxWidth()
     )
 }
 
-@Composable
-private fun FilterTasksMenu(
-    onFilterAllTasks: () -> Unit,
-    onFilterActiveTasks: () -> Unit,
-    onFilterCompletedTasks: () -> Unit
-) {
-    TopAppBarDropdownMenu(
-        iconContent = {
-            Icon(
-                painterResource(id = R.drawable.ic_filter_list),
-                stringResource(id = R.string.menu_filter)
-            )
-        }
-    ) { closeMenu ->
-        DropdownMenuItem(onClick = { onFilterAllTasks(); closeMenu() },
-            text = { Text(text = stringResource(id = R.string.nav_all)) }
-        )
-        DropdownMenuItem(onClick = { onFilterActiveTasks(); closeMenu() },
-            text = { Text(text = stringResource(id = R.string.nav_active)) }
-        )
-        DropdownMenuItem(onClick = { onFilterCompletedTasks(); closeMenu() },
-            text = { Text(text = stringResource(id = R.string.nav_completed)) }
-        )
-    }
-}
-
-@Composable
-private fun MoreTasksMenu(
-    onClearCompletedTasks: () -> Unit,
-    onRefresh: () -> Unit
-) {
-    TopAppBarDropdownMenu(
-        iconContent = {
-            Icon(Icons.Filled.MoreVert, stringResource(id = R.string.menu_more))
-        }
-    ) { closeMenu ->
-        DropdownMenuItem(
-            text = { Text(text = stringResource(id = R.string.menu_clear)) },
-            onClick = { onClearCompletedTasks(); closeMenu() }
-        )
-        DropdownMenuItem(
-            text = { Text(text = stringResource(id = R.string.refresh)) },
-            onClick = { onRefresh(); closeMenu() }
-        )
-    }
-}
 
 @Composable
 private fun TopAppBarDropdownMenu(
@@ -214,7 +176,7 @@ fun AddEditTaskTopAppBar(@StringRes title: Int, onBack: () -> Unit) {
 private fun TasksTopAppBarPreview() {
     TodoTheme {
         Surface {
-            TasksTopAppBar({}, {}, {}, {}, {}, {}, {})
+            TasksTopAppBar({}, {}, {}, {})
         }
     }
 }

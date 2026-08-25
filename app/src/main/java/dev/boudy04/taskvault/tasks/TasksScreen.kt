@@ -24,7 +24,6 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -42,27 +41,28 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Notes
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuBoxScope
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
@@ -73,6 +73,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -102,6 +103,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.boudy04.taskvault.R
 import dev.boudy04.taskvault.data.Task
+import dev.boudy04.taskvault.data.TaskNote
 import dev.boudy04.taskvault.settings.ThemeMode
 import dev.boudy04.taskvault.tasks.TasksFilterType.ACTIVE_TASKS
 import dev.boudy04.taskvault.tasks.TasksFilterType.ALL_TASKS
@@ -109,10 +111,13 @@ import dev.boudy04.taskvault.tasks.TasksFilterType.COMPLETED_TASKS
 import dev.boudy04.taskvault.util.DueDates
 import dev.boudy04.taskvault.util.TasksTopAppBar
 
+/** Which list the segmented control shows; also drives the FAB create context. */
+private enum class Tab { PERSONAL, TEAM }
+
 @Composable
 fun TasksScreen(
     @StringRes userMessage: Int,
-    onAddTask: () -> Unit,
+    onAddTask: (isPersonal: Boolean) -> Unit,
     onTaskClick: (Task) -> Unit,
     onUserMessageDisplayed: () -> Unit,
     openDrawer: () -> Unit,
@@ -126,6 +131,9 @@ fun TasksScreen(
     RequestNotificationsIfNeeded()
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var currentTab by rememberSaveable { mutableStateOf(Tab.TEAM) }
+    // The row whose note sheet is open; null = closed.
+    var notesTask by remember { mutableStateOf<Task?>(null) }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -133,9 +141,6 @@ fun TasksScreen(
         topBar = {
             TasksTopAppBar(
                 openDrawer = openDrawer,
-                onFilterAllTasks = { viewModel.setFiltering(ALL_TASKS) },
-                onFilterActiveTasks = { viewModel.setFiltering(ACTIVE_TASKS) },
-                onFilterCompletedTasks = { viewModel.setFiltering(COMPLETED_TASKS) },
                 onClearCompletedTasks = { viewModel.clearCompletedTasks() },
                 onRefresh = { viewModel.refresh() },
                 onSettingsClick = onSettingsClick,
@@ -144,9 +149,10 @@ fun TasksScreen(
             )
         },
         floatingActionButton = {
-            if (!uiState.isMember) {
+            // Members create only LOCAL-ONLY personal tasks; admins also create team tasks.
+            if (!uiState.isMember || currentTab == Tab.PERSONAL) {
                 SmallFloatingActionButton(
-                    onClick = onAddTask,
+                    onClick = { onAddTask(currentTab == Tab.PERSONAL) },
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary
                 ) {
@@ -172,13 +178,31 @@ fun TasksScreen(
             onSelectSort = viewModel::setSort,
             searchQuery = uiState.searchQuery,
             onSearchQueryChanged = viewModel::setSearchQuery,
+            filtersOpen = uiState.filtersOpen,
+            activeFilterCount = uiState.activeFilterCount,
+            onOpenFilters = viewModel::openFilters,
+            onCloseFilters = viewModel::closeFilters,
+            onResetFilters = viewModel::resetFilters,
+            currentTab = currentTab,
+            onTabChange = { currentTab = it },
+            isMember = uiState.isMember,
+            sessionUserId = uiState.sessionUserId,
+            sessionUsername = uiState.sessionUsername,
             onRefresh = viewModel::refresh,
             onTaskClick = onTaskClick,
             onTaskCheckedChange = viewModel::completeTask,
-            isMember = uiState.isMember,
-            sessionUsername = uiState.sessionUsername,
+            onOpenNotes = { notesTask = it },
             modifier = Modifier.padding(paddingValues)
         )
+
+        notesTask?.let { task ->
+            NoteSheet(
+                task = task,
+                members = uiState.members,
+                onAddNote = { body -> viewModel.addNote(task, body) },
+                onDismiss = { notesTask = null }
+            )
+        }
 
         // Check for user messages to display on the screen
         uiState.userMessage?.let { message ->
@@ -218,15 +242,22 @@ private fun TasksContent(
     onSelectSort: (TasksSort) -> Unit,
     searchQuery: String,
     onSearchQueryChanged: (String) -> Unit,
+    filtersOpen: Boolean,
+    activeFilterCount: Int,
+    onOpenFilters: () -> Unit,
+    onCloseFilters: () -> Unit,
+    onResetFilters: () -> Unit,
+    currentTab: Tab,
+    onTabChange: (Tab) -> Unit,
+    isMember: Boolean,
+    sessionUserId: Int,
+    sessionUsername: String,
     onRefresh: () -> Unit,
     onTaskClick: (Task) -> Unit,
     onTaskCheckedChange: (Task, Boolean) -> Unit,
-    isMember: Boolean,
-    sessionUsername: String,
+    onOpenNotes: (Task) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var showPersonal by rememberSaveable { mutableStateOf(false) }
-
     PullToRefreshBox(
         isRefreshing = loading,
         onRefresh = onRefresh,
@@ -236,6 +267,7 @@ private fun TasksContent(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 16.dp)
+                .verticalScroll(rememberScrollState())
         ) {
             val segmentedColors = SegmentedButtonDefaults.colors(
                 activeContainerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -244,19 +276,19 @@ private fun TasksContent(
             SingleChoiceSegmentedButtonRow(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 8.dp, end = 8.dp, top = 4.dp)
+                    .padding(top = 4.dp)
             ) {
                 SegmentedButton(
-                    selected = showPersonal,
-                    onClick = { showPersonal = true },
+                    selected = currentTab == Tab.PERSONAL,
+                    onClick = { onTabChange(Tab.PERSONAL) },
                     shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
                     colors = segmentedColors
                 ) {
                     Text(stringResource(R.string.section_personal))
                 }
                 SegmentedButton(
-                    selected = !showPersonal,
-                    onClick = { showPersonal = false },
+                    selected = currentTab == Tab.TEAM,
+                    onClick = { onTabChange(Tab.TEAM) },
                     shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
                     colors = segmentedColors
                 ) {
@@ -264,22 +296,46 @@ private fun TasksContent(
                 }
             }
 
-            FilterBar(
-                availableGroups = availableGroups,
-                selectedGroup = selectedGroup,
-                onSelectGroup = onSelectGroup,
-                members = members,
-                personFilter = personFilter,
-                onSelectPerson = onSelectPerson,
-                statusFilter = statusFilter,
-                onSelectStatus = onSelectStatus,
-                sort = sort,
-                onSelectSort = onSelectSort,
-                searchQuery = searchQuery,
-                onSearchQueryChanged = onSearchQueryChanged,
-            )
+            Spacer(Modifier.height(12.dp))
+            // ONE chic entry point for every filter; the badge counts active ones.
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = Color.Transparent,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                    modifier = Modifier.clickable(onClick = onOpenFilters)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(start = 14.dp, end = 10.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.filters_button),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(vertical = 9.dp)
+                        )
+                        if (activeFilterCount > 0) {
+                            Spacer(Modifier.width(6.dp))
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .background(MaterialTheme.colorScheme.primary, CircleShape)
+                            ) {
+                                Text(
+                                    text = activeFilterCount.toString(),
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
 
             if (isMember) {
+                Spacer(Modifier.height(12.dp))
                 Surface(
                     shape = RoundedCornerShape(12.dp),
                     color = MaterialTheme.colorScheme.surfaceVariant,
@@ -292,10 +348,11 @@ private fun TasksContent(
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
                     )
                 }
-                Spacer(Modifier.height(4.dp))
             }
 
-            if (showPersonal) {
+            Spacer(Modifier.height(24.dp))
+
+            if (currentTab == Tab.PERSONAL) {
                 if (personalItems.isEmpty()) {
                     SectionEmpty(
                         headline = stringResource(R.string.empty_title_clear),
@@ -306,9 +363,11 @@ private fun TasksContent(
                         tasks = personalItems,
                         members = members,
                         pendingSyncIds = pendingSyncIds,
+                        showNotes = false,
+                        checkEnabled = true,
                         onTaskClick = onTaskClick,
                         onTaskCheckedChange = onTaskCheckedChange,
-                        checkEnabled = !isMember
+                        onOpenNotes = onOpenNotes
                     )
                 }
             } else {
@@ -317,7 +376,7 @@ private fun TasksContent(
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
-                    modifier = Modifier.padding(bottom = 4.dp)
+                    modifier = Modifier.padding(bottom = 12.dp)
                 )
                 if (teamItems.isEmpty()) {
                     SectionEmpty(
@@ -325,24 +384,86 @@ private fun TasksContent(
                         subtext = stringResource(R.string.empty_team)
                     )
                 } else {
+                    val general = teamItems.filter { it.assigneeIds.isEmpty() }
+                    val mine = teamItems.filter { sessionUserId in it.assigneeIds }
+                    SectionHeader(stringResource(R.string.section_general), general.size)
                     TaskList(
-                        tasks = teamItems,
+                        tasks = general,
                         members = members,
                         pendingSyncIds = pendingSyncIds,
+                        showNotes = true,
+                        // Members flip status only on their own assigned tasks.
+                        checkEnabled = !isMember,
                         onTaskClick = onTaskClick,
                         onTaskCheckedChange = onTaskCheckedChange,
-                        checkEnabled = !isMember
+                        onOpenNotes = onOpenNotes,
+                        perRowCheckEnabled = { !isMember }
                     )
+                    Spacer(Modifier.height(24.dp))
+                    if (mine.isNotEmpty()) {
+                        SectionHeader(stringResource(R.string.section_assigned_you), mine.size)
+                        TaskList(
+                            tasks = mine,
+                            members = members,
+                            pendingSyncIds = pendingSyncIds,
+                            showNotes = true,
+                            checkEnabled = true,
+                            onTaskClick = onTaskClick,
+                            onTaskCheckedChange = onTaskCheckedChange,
+                            onOpenNotes = onOpenNotes,
+                            perRowCheckEnabled = { !isMember || sessionUserId in it.assigneeIds }
+                        )
+                    }
                 }
             }
+            Spacer(Modifier.height(24.dp))
         }
+
+        if (filtersOpen) {
+            FiltersSheet(
+                availableGroups = availableGroups,
+                selectedGroup = selectedGroup,
+                onSelectGroup = onSelectGroup,
+                members = members,
+                personFilter = personFilter,
+                onSelectPerson = onSelectPerson,
+                statusFilter = statusFilter,
+                onSelectStatus = onSelectStatus,
+                sort = sort,
+                onSelectSort = onSelectSort,
+                searchQuery = searchQuery,
+                onSearchQueryChanged = onSearchQueryChanged,
+                onReset = onResetFilters,
+                onDismiss = onCloseFilters
+            )
+        }
+    }
+}
+
+@Composable
+private fun SectionHeader(label: String, count: Int) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        Text(
+            text = count.toString(),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
 @Composable
 private fun SectionEmpty(headline: String, subtext: String) {
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -366,36 +487,35 @@ private fun TaskList(
     tasks: List<Task>,
     members: List<dev.boudy04.taskvault.data.source.network.MemberDto>,
     pendingSyncIds: Set<String>,
+    showNotes: Boolean,
+    checkEnabled: Boolean,
     onTaskClick: (Task) -> Unit,
     onTaskCheckedChange: (Task, Boolean) -> Unit,
-    checkEnabled: Boolean
+    onOpenNotes: (Task) -> Unit,
+    perRowCheckEnabled: (Task) -> Boolean = { checkEnabled }
 ) {
-    LazyColumn {
-        items(
-            items = tasks,
-            key = { it.id },
-            contentType = { "task" }
-        ) { task ->
+    Column {
+        tasks.forEach { task ->
             TaskItem(
                 task = task,
                 members = members,
                 isUnsynced = task.id in pendingSyncIds,
+                showNotes = showNotes,
+                checkEnabled = perRowCheckEnabled(task),
                 onTaskClick = onTaskClick,
                 onCheckedChange = { onTaskCheckedChange(task, it) },
-                checkEnabled = checkEnabled,
-                modifier = Modifier.animateItem()
+                onOpenNotes = { onOpenNotes(task) }
             )
         }
     }
 }
 
 /**
- * UX v2 filter bar: Group / Person / Status dropdowns, Sort menu and a compact
- * expandable search field. All filters AND together.
+ * UX v3 consolidated Filters sheet: Group / Person / Status dropdowns, Sort
+ * selector, Search field and Reset. Everything applies live.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun FilterBar(
+private fun FiltersSheet(
     availableGroups: List<String>,
     selectedGroup: String?,
     onSelectGroup: (String?) -> Unit,
@@ -408,24 +528,50 @@ private fun FilterBar(
     onSelectSort: (TasksSort) -> Unit,
     searchQuery: String,
     onSearchQueryChanged: (String) -> Unit,
-    modifier: Modifier = Modifier
+    onReset: () -> Unit,
+    onDismiss: () -> Unit
 ) {
-    var searchOpen by rememberSaveable { mutableStateOf(searchQuery.isNotEmpty()) }
     var groupExpanded by remember { mutableStateOf(false) }
     var personExpanded by remember { mutableStateOf(false) }
     var statusExpanded by remember { mutableStateOf(false) }
     var sortExpanded by remember { mutableStateOf(false) }
 
-    Column(modifier = modifier.fillMaxWidth().padding(bottom = 8.dp)) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = stringResource(R.string.filters_button),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                TextButton(onClick = onReset) {
+                    Text(stringResource(R.string.filters_reset))
+                }
+            }
+
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = onSearchQueryChanged,
+                placeholder = { Text(stringResource(R.string.search_hint)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
             FilterMenu(
                 label = selectedGroup ?: stringResource(R.string.filter_group),
                 expanded = groupExpanded,
                 onExpandedChange = { groupExpanded = it },
-                modifier = Modifier.weight(1.2f)
+                modifier = Modifier.fillMaxWidth()
             ) {
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.tag_filter_all)) },
@@ -454,7 +600,7 @@ private fun FilterBar(
                 },
                 expanded = personExpanded,
                 onExpandedChange = { personExpanded = it },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.fillMaxWidth()
             ) {
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.person_anyone)) },
@@ -490,7 +636,7 @@ private fun FilterBar(
                 ),
                 expanded = statusExpanded,
                 onExpandedChange = { statusExpanded = it },
-                modifier = Modifier.weight(0.9f)
+                modifier = Modifier.fillMaxWidth()
             ) {
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.tag_filter_all)) },
@@ -514,62 +660,46 @@ private fun FilterBar(
                     }
                 )
             }
-            Box(modifier = Modifier.width(48.dp)) {
-                IconButton(onClick = { sortExpanded = true }) {
-                    Icon(
-                        Icons.Filled.Sort,
-                        contentDescription = stringResource(R.string.filter_sort)
+            FilterMenu(
+                label = stringResource(
+                    when (sort) {
+                        TasksSort.NEAREST_DUE -> R.string.sort_nearest_due
+                        TasksSort.NEWEST -> R.string.sort_newest
+                        TasksSort.OLDEST -> R.string.sort_oldest
+                        TasksSort.PRIORITY -> R.string.sort_priority
+                    }
+                ),
+                expanded = sortExpanded,
+                onExpandedChange = { sortExpanded = it },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                TasksSort.entries.forEach { option ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                stringResource(
+                                    when (option) {
+                                        TasksSort.NEAREST_DUE -> R.string.sort_nearest_due
+                                        TasksSort.NEWEST -> R.string.sort_newest
+                                        TasksSort.OLDEST -> R.string.sort_oldest
+                                        TasksSort.PRIORITY -> R.string.sort_priority
+                                    }
+                                )
+                            )
+                        },
+                        onClick = {
+                            onSelectSort(option)
+                            sortExpanded = false
+                        }
                     )
                 }
-                DropdownMenu(
-                    expanded = sortExpanded,
-                    onDismissRequest = { sortExpanded = false }
-                ) {
-                    TasksSort.entries.forEach { option ->
-                        DropdownMenuItem(
-                            text = {
-                                Text(
-                                    stringResource(
-                                        when (option) {
-                                            TasksSort.NEAREST_DUE -> R.string.sort_nearest_due
-                                            TasksSort.NEWEST -> R.string.sort_newest
-                                            TasksSort.OLDEST -> R.string.sort_oldest
-                                            TasksSort.PRIORITY -> R.string.sort_priority
-                                        }
-                                    )
-                                )
-                            },
-                            onClick = {
-                                onSelectSort(option)
-                                sortExpanded = false
-                            }
-                        )
-                    }
-                }
             }
-            IconButton(onClick = { searchOpen = !searchOpen }) {
-                Icon(
-                    Icons.Filled.Search,
-                    contentDescription = stringResource(R.string.cd_search_toggle)
-                )
-            }
-        }
-
-        AnimatedVisibility(visible = searchOpen) {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = onSearchQueryChanged,
-                placeholder = { Text(stringResource(R.string.search_hint)) },
-                singleLine = true,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 4.dp),
-            )
+            Spacer(Modifier.height(24.dp))
         }
     }
 }
 
-/** Compact outlined-pill dropdown used across the filter bar. */
+/** Compact outlined-pill dropdown used inside the Filters sheet. */
 @Composable
 private fun FilterMenu(
     label: String,
@@ -581,7 +711,7 @@ private fun FilterMenu(
     ExposedDropdownMenuBox(
         expanded = expanded,
         onExpandedChange = onExpandedChange,
-        modifier = modifier.padding(horizontal = 2.dp)
+        modifier = modifier
     ) {
         Surface(
             shape = RoundedCornerShape(50),
@@ -621,18 +751,110 @@ private fun FilterMenu(
     }
 }
 
+/** Notes sheet: existing notes plus an inline composer; posts directly to the server. */
+@Composable
+private fun NoteSheet(
+    task: Task,
+    members: List<dev.boudy04.taskvault.data.source.network.MemberDto>,
+    onAddNote: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var draft by remember { mutableStateOf("") }
+
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.notes_title),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            if (task.notes.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.note_empty),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                task.notes.forEach { note ->
+                    NoteRow(note = note, members = members)
+                }
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                OutlinedTextField(
+                    value = draft,
+                    onValueChange = { draft = it },
+                    placeholder = { Text(stringResource(R.string.note_hint)) },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f)
+                )
+                TextButton(
+                    onClick = {
+                        val body = draft.trim()
+                        if (body.isNotEmpty()) {
+                            onAddNote(body)
+                            draft = ""
+                        }
+                    },
+                    enabled = draft.isNotBlank()
+                ) {
+                    Text(stringResource(R.string.note_add))
+                }
+            }
+            Spacer(Modifier.height(24.dp))
+        }
+    }
+}
+
+@Composable
+private fun NoteRow(
+    note: TaskNote,
+    members: List<dev.boudy04.taskvault.data.source.network.MemberDto>
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = members.firstOrNull { it.username == note.author }?.username ?: note.author,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = DueDates.relative(note.createdAt),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Text(
+            text = note.body,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+    }
+}
+
 @Composable
 private fun TaskItem(
     task: Task,
     members: List<dev.boudy04.taskvault.data.source.network.MemberDto>,
     isUnsynced: Boolean,
+    showNotes: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     onTaskClick: (Task) -> Unit,
+    onOpenNotes: () -> Unit,
     checkEnabled: Boolean,
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
-    val hasMetadata = task.tags.isNotEmpty() || task.dueAt != null || task.assigneeIds.isNotEmpty()
+    val latestNote = task.notes.firstOrNull()
+    val hasMetadata = task.tags.isNotEmpty() || task.dueAt != null ||
+        task.assigneeIds.isNotEmpty() || latestNote != null
 
     Surface(
         modifier = modifier
@@ -642,55 +864,76 @@ private fun TaskItem(
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable { onTaskClick(task) }
                 .padding(all = 14.dp)
         ) {
-            MiniCheckbox(
-                checked = task.isCompleted,
-                enabled = checkEnabled,
-                onCheckedChange = { checked ->
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onCheckedChange(checked)
-                },
-                modifier = Modifier.padding(end = 12.dp)
-            )
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .alpha(if (task.isCompleted) 0.45f else 1f)
-            ) {
-                Text(
-                    text = task.titleForList,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    textDecoration = if (task.isCompleted) {
-                        TextDecoration.LineThrough
-                    } else {
-                        null
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                MiniCheckbox(
+                    checked = task.isCompleted,
+                    enabled = checkEnabled,
+                    onCheckedChange = { checked ->
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onCheckedChange(checked)
                     },
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+                    modifier = Modifier.padding(end = 12.dp)
                 )
-                if (hasMetadata) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 6.dp)
-                    ) {
-                        task.tags.forEach { tag -> MetaChip(text = tag) }
-                        task.dueAt?.let { iso -> DueChip(iso = iso, isActive = task.isActive) }
-                        Spacer(Modifier.weight(1f))
-                        AssigneeBadges(assigneeIds = task.assigneeIds, members = members)
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .alpha(if (task.isCompleted) 0.45f else 1f)
+                ) {
+                    Text(
+                        text = task.titleForList,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        textDecoration = if (task.isCompleted) {
+                            TextDecoration.LineThrough
+                        } else {
+                            null
+                        },
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (hasMetadata) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 6.dp)
+                        ) {
+                            task.tags.forEach { tag -> MetaChip(text = tag) }
+                            task.dueAt?.let { iso -> DueChip(iso = iso, isActive = task.isActive) }
+                            Spacer(Modifier.weight(1f))
+                            AssigneeBadges(assigneeIds = task.assigneeIds, members = members)
+                        }
+                    }
+                    latestNote?.let { note ->
+                        Text(
+                            text = "${note.author}: ${note.body}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(top = 6.dp)
+                        )
                     }
                 }
+                if (showNotes) {
+                    IconButton(onClick = onOpenNotes, modifier = Modifier.size(32.dp)) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.Notes,
+                            contentDescription = stringResource(R.string.cd_open_notes),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+                SyncBadge(isUnsynced = isUnsynced, modifier = Modifier.padding(start = 10.dp))
             }
-            SyncBadge(isUnsynced = isUnsynced, modifier = Modifier.padding(start = 10.dp))
         }
     }
 }

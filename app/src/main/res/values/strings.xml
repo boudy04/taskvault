@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <!--
      Copyright 2019 The Android Open Source Project
 
@@ -79,7 +79,7 @@
     <string name="due_none">None</string>
     <string name="due_today">Today</string>
     <string name="due_tomorrow">Tomorrow</string>
-    <string name="due_pick_date">Pick date…</string>
+    <string name="due_pick_date">Pick dateâ€¦</string>
     <string name="due_clear">Clear</string>
 
     <string name="cd_settings">Settings</string>
@@ -168,7 +168,7 @@
     <string name="team_error_offline">Can\'t reach the server. Check the connection above.</string>
     <string name="team_error_duplicate">That username is already taken.</string>
     <string name="team_error_delete">Couldn\'t remove member</string>
-    <string name="team_error_invalid">Use 3–24 characters: a-z, 0-9, dot, dash, underscore.</string>
+    <string name="team_error_invalid">Use 3â€“24 characters: a-z, 0-9, dot, dash, underscore.</string>
 
     <!-- Identity picker / roles -->
     <string name="login_title">Who\'s working?</string>
@@ -181,5 +181,24 @@
     <string name="member_banner">Signed in as %1$s - view-only (member)</string>
     <string name="view_only_access">Members have view-only access</string>
     <string name="settings_signed_in_as">Signed in as %1$s (member)</string>
-    <string name="settings_switch_identity">Switch identity</string></resources>
+    <string name="settings_switch_identity">Switch identity</string>
 
+    <!-- Task 33: two-input login -->
+    <string name="login_name_hint">Name</string>
+    <string name="login_password_hint">Password</string>
+    <string name="login_helper">Only type a password if you&#8217;re the administrator</string>
+    <string name="login_enter">Enter</string>
+    <string name="login_error_invalid_name">Invalid name &#8226; use 3-24 characters: a-z, 0-9, dot, dash, underscore</string>
+    <!-- Task 33: member notes -->
+    <string name="notes_title">Notes</string>
+    <string name="note_hint">Add a note</string>
+    <string name="note_add">Add</string>
+    <string name="note_error_forbidden">Only assignees can add notes</string>
+    <string name="note_empty">No notes yet</string>
+    <string name="cd_open_notes">Open notes</string>
+    <!-- Task 33: consolidated filters + sections -->
+    <string name="filters_button">Filters</string>
+    <string name="filters_reset">Reset</string>
+    <string name="section_general">General</string>
+    <string name="section_assigned_you">Assigned to you</string>
+</resources>

@@ -33,6 +33,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import dev.boudy04.taskvault.TodoDestinationsArgs.TASK_ID_ARG
+import dev.boudy04.taskvault.TodoDestinationsArgs.IS_PERSONAL_ARG
 import dev.boudy04.taskvault.TodoDestinationsArgs.TITLE_ARG
 import dev.boudy04.taskvault.TodoDestinationsArgs.USER_MESSAGE_ARG
 import dev.boudy04.taskvault.addedittask.AddEditTaskScreen
@@ -76,7 +77,9 @@ fun TodoNavGraph(
                 TasksScreen(
                     userMessage = entry.arguments?.getInt(USER_MESSAGE_ARG)!!,
                     onUserMessageDisplayed = { entry.arguments?.putInt(USER_MESSAGE_ARG, 0) },
-                    onAddTask = { navActions.navigateToAddEditTask(R.string.add_task, null) },
+                    onAddTask = { isPersonal ->
+                        navActions.navigateToAddEditTask(R.string.add_task, null, isPersonal)
+                    },
                     onTaskClick = { task -> navActions.navigateToTaskDetail(task.id) },
                     openDrawer = { coroutineScope.launch { drawerState.open() } },
                     onSettingsClick = navActions::navigateToSettings,
@@ -98,6 +101,7 @@ fun TodoNavGraph(
             arguments = listOf(
                 navArgument(TITLE_ARG) { type = NavType.IntType },
                 navArgument(TASK_ID_ARG) { type = NavType.StringType; nullable = true },
+                navArgument(IS_PERSONAL_ARG) { type = NavType.BoolType; defaultValue = false },
             )
         ) { entry ->
             val taskId = entry.arguments?.getString(TASK_ID_ARG)

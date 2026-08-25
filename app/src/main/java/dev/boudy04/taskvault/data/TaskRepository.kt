@@ -18,6 +18,9 @@ package dev.boudy04.taskvault.data
 
 import kotlinx.coroutines.flow.Flow
 
+/** Outcome of a note post; the UI maps each to a distinct message. */
+enum class NoteResult { ADDED, FORBIDDEN, FAILED }
+
 /**
  * Interface to the data layer.
  */
@@ -42,6 +45,8 @@ interface TaskRepository {
         dueAt: String? = null,
         tags: List<String> = emptyList(),
         assigneeIds: List<Int> = emptyList(),
+        /** LOCAL-ONLY task: Room write only, never queued or pushed to the server. */
+        isPersonal: Boolean = false,
     ): String
 
     suspend fun updateTask(
@@ -71,5 +76,8 @@ interface TaskRepository {
 
     /** All distinct canonical tags across tasks (for the tag filter bar / suggestions). */
     suspend fun getAllTags(): List<String>
+
+    /** Posts a note to the server task; result discloses 403 vs connectivity failure. */
+    suspend fun addNote(taskId: String, body: String): NoteResult
 }
 

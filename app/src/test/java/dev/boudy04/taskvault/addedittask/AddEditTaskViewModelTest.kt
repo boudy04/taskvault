@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright 2019 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,8 +30,10 @@ import dev.boudy04.taskvault.data.source.network.MemberDto
 import dev.boudy04.taskvault.data.source.network.MemberLoginRequest
 import dev.boudy04.taskvault.data.source.network.MemberLoginResponse
 import dev.boudy04.taskvault.data.source.network.MemberRequest
+import dev.boudy04.taskvault.data.source.network.NoteRequest
 import dev.boudy04.taskvault.data.source.network.TaskApiService
 import dev.boudy04.taskvault.data.source.network.TaskDto
+import dev.boudy04.taskvault.data.source.network.TaskStatusUpdate
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -274,5 +276,7 @@ private class FakeApi : TaskApiService {
 
     override suspend fun membersLogin(body: MemberLoginRequest) = MemberLoginResponse("t", "member", body.username)
     override suspend fun adminVerify(body: AdminVerifyRequest) = MeResponse(1, "x", "admin")
-    override suspend fun membersMe() = MeResponse(1, "x", "member")
+        override suspend fun membersMe() = MeResponse(1, "x", "member")
+    override suspend fun addNote(id: Int, body: NoteRequest) = Response.success(Unit)
+    override suspend fun updateTaskStatus(id: Int, body: TaskStatusUpdate) = TaskDto(id = id)
 }

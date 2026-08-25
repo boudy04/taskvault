@@ -6,6 +6,7 @@ import dev.boudy04.taskvault.data.source.local.PendingOpState
 import dev.boudy04.taskvault.data.source.local.PendingOpType
 import dev.boudy04.taskvault.data.source.local.TaskDao
 import dev.boudy04.taskvault.data.source.network.TaskApiService
+import dev.boudy04.taskvault.data.source.network.TaskStatusUpdate
 import dev.boudy04.taskvault.data.source.network.toLocal
 import dev.boudy04.taskvault.data.toDtoWithoutServerId
 import dev.boudy04.taskvault.di.IoDispatcher
@@ -60,6 +61,14 @@ class SyncEngine @Inject constructor(
                     PendingOpType.UPDATE -> {
                         val target = payload.serverId ?: error("UPDATE without serverId")
                         val updated = api.updateTask(target, payload.toDtoWithoutServerId())
+                        tasks.getById(payload.localId)?.let { row ->
+                            tasks.upsert(row.copy(updatedAt = updated.updatedAt))
+                        }
+                    }
+                    PendingOpType.STATUS -> {
+                        // Assignee writes carry ONLY {"status": ...}; anything richer gets 403.
+                        val target = payload.serverId ?: error("STATUS without serverId")
+                        val updated = api.updateTaskStatus(target, TaskStatusUpdate(payload.status))
                         tasks.getById(payload.localId)?.let { row ->
                             tasks.upsert(row.copy(updatedAt = updated.updatedAt))
                         }
@@ -127,7 +136,10 @@ class SyncEngine @Inject constructor(
         }
         tasks.getAll().forEach { row ->
             val sid = row.serverId
-            if (sid != null && sid !in remoteIds && row.id !in protected) tasks.deleteById(row.id)
+            // Personal rows are local-only: reconcile never deletes them.
+            if (!row.isPersonal && sid != null && sid !in remoteIds && row.id !in protected) {
+                tasks.deleteById(row.id)
+            }
         }
         return true
     }

@@ -1,4 +1,4 @@
-package dev.boudy04.taskvault.sync
+﻿package dev.boudy04.taskvault.sync
 
 import com.google.common.truth.Truth.assertThat
 import dev.boudy04.taskvault.data.source.local.FakePendingOpDao
@@ -15,8 +15,10 @@ import dev.boudy04.taskvault.data.source.network.MemberDto
 import dev.boudy04.taskvault.data.source.network.MemberLoginRequest
 import dev.boudy04.taskvault.data.source.network.MemberLoginResponse
 import dev.boudy04.taskvault.data.source.network.MemberRequest
+import dev.boudy04.taskvault.data.source.network.NoteRequest
 import dev.boudy04.taskvault.data.source.network.TaskApiService
 import dev.boudy04.taskvault.data.source.network.TaskDto
+import dev.boudy04.taskvault.data.source.network.TaskStatusUpdate
 import dev.boudy04.taskvault.settings.FakeSettingsRepository
 import java.io.IOException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -76,7 +78,13 @@ private class FakeApi(
     override suspend fun membersLogin(body: MemberLoginRequest) =
         MemberLoginResponse("t", "member", body.username)
     override suspend fun adminVerify(body: AdminVerifyRequest) = MeResponse(1, "x", "admin")
-    override suspend fun membersMe() = MeResponse(1, "x", "member")
+        override suspend fun membersMe() = MeResponse(1, "x", "member")
+    override suspend fun addNote(id: Int, body: NoteRequest) = Response.success(Unit)
+    val putStatuses = mutableListOf<Pair<Int, String>>()
+    override suspend fun updateTaskStatus(id: Int, body: TaskStatusUpdate): TaskDto {
+        putStatuses += id to body.status
+        return TaskDto(id = id, updatedAt = "u-status")
+    }
 
     override suspend fun createMember(body: MemberRequest): MemberDto =
         error("not used")
@@ -286,5 +294,40 @@ class SyncEngineTest {
         val outcome = engine.run()
 
         assertThat(outcome).isEqualTo(SyncOutcome.SUCCESS)
+    }
+
+    // ---------- Task 33: status-only drain + personal rows survive pull ----------
+
+    @Test
+    fun statusOnly_drain_putsStatusFieldOnly_andClearsOp() = runTest(dispatcher) {
+        tasks.upsert(localTask("m1", serverId = 21))
+        enqueue(PendingOpType.STATUS, payload("m1", serverId = 21).copy(status = "done"))
+        api.listResult = listOf(TaskDto(id = 21, status = "done", updatedAt = "u-status"))
+
+        val outcome = engine.run()
+
+        assertThat(outcome).isEqualTo(SyncOutcome.SUCCESS)
+        // Exactly one status PUT carrying only the new status.
+        assertThat(api.putStatuses).containsExactly(21 to "done")
+        assertThat(api.putIds).isEmpty()
+        assertThat(ops.getAll()).isEmpty()
+    }
+
+    @Test
+    fun pull_reconcile_neverDeletesPersonalRows() = runTest(dispatcher) {
+        tasks.upsert(
+            LocalTask(
+                id = "local-only", title = "Mine", description = "d",
+                isCompleted = false, isPersonal = true,
+            ),
+        )
+        // The server list does not know about the personal row at all.
+        api.listResult = listOf(TaskDto(id = 300, title = "Y", status = "todo", priority = "low"))
+
+        val outcome = engine.run()
+
+        assertThat(outcome).isEqualTo(SyncOutcome.SUCCESS)
+        assertThat(tasks.getById("local-only")?.title).isEqualTo("Mine")
+        assertThat(tasks.getByServerId(300)?.title).isEqualTo("Y")
     }
 }

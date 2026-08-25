@@ -3,6 +3,7 @@ package dev.boudy04.taskvault.data.source.network
 import dev.boudy04.taskvault.data.TaskPriority
 import dev.boudy04.taskvault.data.TaskStatus
 import dev.boudy04.taskvault.data.joinIds
+import dev.boudy04.taskvault.data.joinNotes
 import dev.boudy04.taskvault.data.joinTags
 import dev.boudy04.taskvault.data.parseIds
 import dev.boudy04.taskvault.data.parseTags
@@ -26,6 +27,8 @@ data class TaskDto(
     @SerialName("assignees") val assignees: List<MemberDto> = emptyList(),
     /** Server write shape: full replacement list of member ids. */
     @SerialName("assignee_ids") val assigneeIds: List<Int> = emptyList(),
+    /** TaskRead notes, newest order as returned by the server. */
+    val notes: List<NoteDto> = emptyList(),
 )
 
 fun TaskStatus.toApi(): String = when (this) {
@@ -66,6 +69,7 @@ fun TaskDto.toLocal(): LocalTask = LocalTask(
     dueAt = dueAt,
     tags = joinTags(tags),
     assigneeIds = joinIds(assignees.map { it.id }),
+    notes = joinNotes(notes),
 )
 
 fun LocalTask.toDto(): TaskDto = TaskDto(

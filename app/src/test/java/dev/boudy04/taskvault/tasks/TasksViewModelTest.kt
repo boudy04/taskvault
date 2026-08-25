@@ -34,8 +34,10 @@ import dev.boudy04.taskvault.data.source.network.MemberDto
 import dev.boudy04.taskvault.data.source.network.MemberLoginRequest
 import dev.boudy04.taskvault.data.source.network.MemberLoginResponse
 import dev.boudy04.taskvault.data.source.network.MemberRequest
+import dev.boudy04.taskvault.data.source.network.NoteRequest
 import dev.boudy04.taskvault.data.source.network.TaskApiService
 import dev.boudy04.taskvault.data.source.network.TaskDto
+import dev.boudy04.taskvault.data.source.network.TaskStatusUpdate
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -76,7 +78,9 @@ private class FakeApi : TaskApiService {
 
     override suspend fun membersLogin(body: MemberLoginRequest) = MemberLoginResponse("t", "member", body.username)
     override suspend fun adminVerify(body: AdminVerifyRequest) = MeResponse(1, "x", "admin")
-    override suspend fun membersMe() = MeResponse(1, "x", "member")
+        override suspend fun membersMe() = MeResponse(1, "x", "member")
+    override suspend fun addNote(id: Int, body: NoteRequest) = Response.success(Unit)
+    override suspend fun updateTaskStatus(id: Int, body: TaskStatusUpdate) = TaskDto(id = id)
 }
 
 /**
@@ -306,16 +310,17 @@ class TasksViewModelTest {
     }
 
     @Test
-    fun personalTeamSplit_zeroAssigneesIsPersonal() = runTest {
+    fun personalTeamSplit_isPersonalFlagDrivesSections() = runTest {
         tasksRepository.addTasks(
-            Task(id = "40", title = "Solo", description = ""),
-            Task(id = "41", title = "Shared", description = "", assigneeIds = listOf(1)),
+            Task(id = "40", title = "Mine", description = "", isPersonal = true),
+            Task(id = "41", title = "Team unassigned", description = ""),
+            Task(id = "42", title = "Assigned", description = "", assigneeIds = listOf(2)),
         )
 
         val state = tasksViewModel.uiState.first()
-        // Team shows everything; Personal only unassigned tasks.
-        assertThat(state.items.map { it.id }).containsExactly("1", "2", "3", "40", "41")
-        assertThat(state.personalItems.map { it.id }).containsExactly("1", "2", "3", "40")
+        // Team tab: non-personal rows only; Personal tab: flagged rows only.
+        assertThat(state.items.map { it.id }).containsExactly("1", "2", "3", "41", "42")
+        assertThat(state.personalItems.map { it.id }).containsExactly("40")
     }
 
     @Test
@@ -464,6 +469,66 @@ class TasksViewModelTest {
             .isEqualTo(R.string.view_only_access)
     }
 
+    @Test
+    fun teamSubsections_generalVsAssignedToYou() = runTest {
+        val settings = dev.boudy04.taskvault.settings.FakeSettingsRepository(
+            initialToken = "tok",
+            initialRole = dev.boudy04.taskvault.settings.Session.MEMBER_ROLE,
+            initialUsername = "alice",
+            initialUserId = 1,
+        )
+        tasksRepository.addTasks(
+            Task(id = "60", title = "General chore", description = ""),
+            Task(id = "61", title = "For bob", description = "", assigneeIds = listOf(2)),
+            Task(id = "62", title = "For alice", description = "", assigneeIds = listOf(1)),
+        )
+        tasksViewModel = TasksViewModel(
+            tasksRepository, FakeApi(), settings, dev.boudy04.taskvault.sync.ViewOnlyRejections(), SavedStateHandle(),
+        )
+        advanceUntilIdle()
+
+        val state = tasksViewModel.uiState.first()
+        assertThat(state.sessionUserId).isEqualTo(1)
+        // The UI derives subsections from items + sessionUserId; assert both halves.
+        assertThat(state.items.filter { it.assigneeIds.isEmpty() }.map { it.id })
+            .containsExactly("1", "2", "3", "60")
+        assertThat(state.items.filter { 1 in it.assigneeIds }.map { it.id })
+            .containsExactly("62")
+    }
+
+    @Test
+    fun filtersSheet_opensClosesAndCountsActiveFilters() = runTest {
+        tasksViewModel.openFilters()
+        var state = tasksViewModel.uiState.first()
+        assertThat(state.filtersOpen).isTrue()
+        assertThat(state.activeFilterCount).isEqualTo(0)
+
+        tasksViewModel.selectGroup("work")
+        tasksViewModel.setSearchQuery("thing")
+        state = tasksViewModel.uiState.first()
+        assertThat(state.activeFilterCount).isEqualTo(2)
+
+        tasksViewModel.closeFilters()
+        assertThat(tasksViewModel.uiState.first().filtersOpen).isFalse()
+
+        tasksViewModel.resetFilters()
+        state = tasksViewModel.uiState.first()
+        assertThat(state.activeFilterCount).isEqualTo(0)
+        assertThat(state.selectedGroup).isNull()
+        assertThat(state.searchQuery).isEmpty()
+    }
+
+    @Test
+    fun statusAndSort_countTowardActiveFilters() = runTest {
+        tasksViewModel.setFiltering(TasksFilterType.ACTIVE_TASKS)
+        tasksViewModel.setSort(TasksSort.PRIORITY)
+        val state = tasksViewModel.uiState.first()
+        assertThat(state.activeFilterCount).isEqualTo(2)
+
+        tasksViewModel.resetFilters()
+        assertThat(tasksViewModel.uiState.first().statusFilter).isEqualTo(TasksFilterType.ALL_TASKS)
+        assertThat(tasksViewModel.uiState.first().sort).isEqualTo(TasksSort.NEAREST_DUE)
+    }
     @Test
     fun setSearchQuery_matchesGroup() = runTest {
         tasksRepository.addTasks(Task(id = "20", title = "Plain", description = "", tags = listOf("someday")))

@@ -19,6 +19,9 @@ package dev.boudy04.taskvault.data
 /** Group presets always offered in group pickers/filter menus. */
 val GROUP_PRESETS = listOf("work", "personal", "urgent", "errands")
 
+/** A server-side note attached to a task (read-only locally). */
+data class TaskNote(val author: String, val body: String, val createdAt: String)
+
 /**
  * Immutable model class for a Task.
  *
@@ -41,6 +44,10 @@ data class Task(
     /** Workspace member ids assigned to this task; empty = personal task. */
     val assigneeIds: List<Int> = emptyList(),
     val createdAt: String? = null,
+    /** LOCAL-ONLY marker mirrored from Room; personal tasks never reach the server. */
+    val isPersonal: Boolean = false,
+    /** Server notes; empty for personal tasks. */
+    val notes: List<TaskNote> = emptyList(),
     val id: String,
 ) {
     val titleForList: String

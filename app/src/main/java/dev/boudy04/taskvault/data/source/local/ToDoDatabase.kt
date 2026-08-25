@@ -27,7 +27,7 @@ import androidx.room.TypeConverters
  */
 @Database(
     entities = [LocalTask::class, PendingOpEntity::class],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

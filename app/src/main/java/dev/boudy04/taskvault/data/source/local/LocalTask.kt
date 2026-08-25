@@ -48,4 +48,10 @@ data class LocalTask(
 
     /** Comma-joined assignee member ids ("1,3"); empty string = unassigned. */
     var assigneeIds: String = "",
+
+    /** LOCAL-ONLY marker: personal tasks never sync, enqueue, or appear for the admin. */
+    var isPersonal: Boolean = false,
+
+    /** JSON-encoded list of server notes (author/body/created_at); "[]" = none. */
+    var notes: String = "[]",
 )

@@ -21,12 +21,15 @@ import dev.boudy04.taskvault.data.source.local.PendingOpDao
 import dev.boudy04.taskvault.data.source.local.PendingOpEntity
 import dev.boudy04.taskvault.data.source.local.PendingOpType
 import dev.boudy04.taskvault.data.source.local.TaskDao
+import dev.boudy04.taskvault.data.source.network.NoteRequest
+import dev.boudy04.taskvault.data.source.network.TaskApiService
 import dev.boudy04.taskvault.data.source.network.toApi
 import dev.boudy04.taskvault.data.joinIds
 import dev.boudy04.taskvault.data.joinTags
 import dev.boudy04.taskvault.data.parseIds
 import dev.boudy04.taskvault.data.parseTags
 import dev.boudy04.taskvault.di.DefaultDispatcher
+import dev.boudy04.taskvault.settings.SettingsRepository
 import dev.boudy04.taskvault.sync.ReminderScheduler
 import dev.boudy04.taskvault.sync.SyncScheduler
 import dev.boudy04.taskvault.sync.TaskPayload
@@ -37,13 +40,16 @@ import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import retrofit2.HttpException
 
 /**
- * Offline-first [TaskRepository]: every mutation writes to Room first, enqueues a pending op
+ * Offline-first [TaskRepository]: every team mutation writes to Room first, enqueues a pending op
  * carrying a serializable [TaskPayload], then asks the [SyncScheduler] for a unique sync run.
+ * Personal tasks are LOCAL-ONLY: Room writes never enqueue and never reach the network.
  */
 @Singleton
 class DefaultTaskRepository @Inject constructor(
@@ -51,6 +57,8 @@ class DefaultTaskRepository @Inject constructor(
     private val pendingOps: PendingOpDao,
     private val syncScheduler: SyncScheduler,
     private val reminders: ReminderScheduler,
+    private val api: TaskApiService,
+    private val settings: SettingsRepository,
     private val json: Json,
     @DefaultDispatcher private val dispatcher: CoroutineDispatcher,
 ) : TaskRepository {
@@ -62,6 +70,7 @@ class DefaultTaskRepository @Inject constructor(
         dueAt: String?,
         tags: List<String>,
         assigneeIds: List<Int>,
+        isPersonal: Boolean,
     ): String {
         // ID creation might be a complex operation so it's executed using the supplied
         // coroutine dispatcher
@@ -78,9 +87,12 @@ class DefaultTaskRepository @Inject constructor(
             dueAt = dueAt,
             tags = joinTags(tags),
             assigneeIds = joinIds(assigneeIds),
+            isPersonal = isPersonal,
         )
         localDataSource.upsert(task)
-        enqueue(PendingOpType.CREATE, task)
+        if (!isPersonal) {
+            enqueue(PendingOpType.CREATE, task)
+        }
         scheduleReminder(task.id, task.title, task.dueAt)
         return taskId
     }
@@ -104,7 +116,11 @@ class DefaultTaskRepository @Inject constructor(
             assigneeIds = joinIds(assigneeIds),
         )
         localDataSource.upsert(updated)
-        enqueue(PendingOpType.UPDATE, updated)
+        // ponytail: personal rows are Room-only by design; if team edits ever need
+        // offline queueing per-field, revisit the payload here
+        if (!updated.isPersonal) {
+            enqueue(PendingOpType.UPDATE, updated)
+        }
         // dueAt replaces or clears wholesale, so drop any old alarm first
         reminders.cancel(taskId)
         scheduleReminder(taskId, updated.title, updated.dueAt)
@@ -119,7 +135,14 @@ class DefaultTaskRepository @Inject constructor(
         val task = localDataSource.getById(taskId) ?: return
         val updated = task.copy(status = status, isCompleted = status == TaskStatus.DONE)
         localDataSource.upsert(updated)
-        enqueue(PendingOpType.UPDATE, updated)
+        when {
+            // Personal rows stay purely local.
+            updated.isPersonal -> Unit
+            // Members may only send {"status": ...}; the server rejects anything richer.
+            settings.session.first().isMember && updated.serverId != null ->
+                enqueue(PendingOpType.STATUS, updated)
+            else -> enqueue(PendingOpType.UPDATE, updated)
+        }
         if (status == TaskStatus.DONE) {
             reminders.cancel(taskId)
         } else {
@@ -133,7 +156,20 @@ class DefaultTaskRepository @Inject constructor(
         pendingOps.clearForTask(taskId) // drop stale ops for this row before queueing the tombstone
         localDataSource.deleteById(taskId) // UI reflects deletion instantly
         reminders.cancel(taskId)
-        if (task.serverId != null) enqueue(PendingOpType.DELETE, task)
+        if (task.serverId != null && !task.isPersonal) enqueue(PendingOpType.DELETE, task)
+    }
+
+    override suspend fun addNote(taskId: String, body: String): NoteResult {
+        val serverId = localDataSource.getById(taskId)?.serverId ?: return NoteResult.FAILED
+        return try {
+            api.addNote(serverId, NoteRequest(body))
+            refresh() // pull brings the new note back inside the task's TaskRead
+            NoteResult.ADDED
+        } catch (e: HttpException) {
+            if (e.code() == HTTP_FORBIDDEN) NoteResult.FORBIDDEN else NoteResult.FAILED
+        } catch (_: Exception) {
+            NoteResult.FAILED
+        }
     }
 
     override suspend fun clearCompletedTasks() {
@@ -211,5 +247,9 @@ class DefaultTaskRepository @Inject constructor(
         if (millis > System.currentTimeMillis()) {
             reminders.schedule(localId, title, millis)
         }
+    }
+
+    private companion object {
+        const val HTTP_FORBIDDEN = 403
     }
 }

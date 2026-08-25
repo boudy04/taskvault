@@ -48,4 +48,12 @@ interface TaskApiService {
 
     @GET("api/members/me")
     suspend fun membersMe(): MeResponse
+
+    /** Admin + assignees only; 201 on success, 403 for non-assignees. */
+    @POST("api/tasks/{id}/notes")
+    suspend fun addNote(@Path("id") id: Int, @Body body: NoteRequest): Response<Unit>
+
+    /** Status-only PUT: the sole write shape accepted from assignees. */
+    @PUT("api/tasks/{id}")
+    suspend fun updateTaskStatus(@Path("id") id: Int, @Body body: TaskStatusUpdate): TaskDto
 }

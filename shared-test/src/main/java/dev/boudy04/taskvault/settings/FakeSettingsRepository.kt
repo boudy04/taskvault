@@ -9,15 +9,17 @@ class FakeSettingsRepository(
     initialToken: String = "",
     initialRole: String = "",
     initialUsername: String = "",
+    initialUserId: Int = 0,
 ) : SettingsRepository {
 
     private val configState = MutableStateFlow(ServerConfig(initialUrl, initialToken))
-    private val sessionState = MutableStateFlow(Session(initialToken, initialRole, initialUsername))
+    private val sessionState = MutableStateFlow(Session(initialToken, initialRole, initialUsername, initialUserId))
 
     /** Convenience read accessors for assertions. */
     val sessionToken: String get() = sessionState.value.token
     val sessionRole: String get() = sessionState.value.role
     val sessionUsername: String get() = sessionState.value.username
+    val sessionUserId: Int get() = sessionState.value.userId
 
     override val config: Flow<ServerConfig> = configState
 
@@ -43,6 +45,10 @@ class FakeSettingsRepository(
         configState.value = configState.value.copy(token = token)
     }
 
+
+    override suspend fun setUserId(id: Int) {
+        sessionState.value = sessionState.value.copy(userId = id)
+    }
     override suspend fun clearSession() {
         sessionState.value = Session()
     }

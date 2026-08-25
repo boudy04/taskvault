@@ -64,6 +64,7 @@ class FakeTaskRepository : TaskRepository {
         dueAt: String?,
         tags: List<String>,
         assigneeIds: List<Int>,
+        isPersonal: Boolean,
     ): String {
         val taskId = generateTaskId()
         Task(title = title, description = description, priority = priority, dueAt = dueAt, tags = tags, assigneeIds = assigneeIds, id = taskId).also {
@@ -71,6 +72,8 @@ class FakeTaskRepository : TaskRepository {
         }
         return taskId
     }
+
+    override suspend fun addNote(taskId: String, body: String): NoteResult = NoteResult.ADDED
 
     override fun getTasksStream(): Flow<List<Task>> = observableTasks
 

@@ -24,7 +24,6 @@ import dev.boudy04.taskvault.data.source.local.PendingOpState
 import dev.boudy04.taskvault.data.source.local.PendingOpType
 import dev.boudy04.taskvault.sync.ReminderScheduler
 import dev.boudy04.taskvault.sync.SyncScheduler
-import dev.boudy04.taskvault.sync.TaskPayload
 import dev.boudy04.taskvault.data.source.network.AdminVerifyRequest
 import dev.boudy04.taskvault.data.source.network.AuthRequest
 import dev.boudy04.taskvault.data.source.network.AuthResponse
@@ -53,7 +52,7 @@ import org.junit.Test
 
 /**
  * Contract tests for the offline-first repository write path: every mutation writes locally,
- * enqueues a pending op with a serializable [TaskPayload], and requests a sync.
+ * enqueues a pending op with a serializable [TaskDto], and requests a sync.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class OfflineFirstRepositoryTest {
@@ -143,8 +142,8 @@ class OfflineFirstRepositoryTest {
         val op = fakePendingOps.getAll().single()
         assertEquals(PendingOpType.CREATE, op.opType)
         assertEquals(PendingOpState.PENDING, op.state)
-        val payload = json.decodeFromString<TaskPayload>(op.payload)
-        assertEquals(id, payload.localId)
+        val payload = json.decodeFromString<TaskDto>(op.payload)
+        assertEquals(id, op.taskLocalId)
         assertEquals(1, syncRequests.requests.size)
     }
 
@@ -154,7 +153,7 @@ class OfflineFirstRepositoryTest {
         val id = repo.createTask("Tagged", "body", TaskPriority.LOW, null, listOf(" Work ", "home", "WORK"))
 
         assertEquals("work,home", fakeTaskDao.getById(id)!!.tags)
-        val payload = json.decodeFromString<TaskPayload>(fakePendingOps.getAll().single().payload)
+        val payload = json.decodeFromString<TaskDto>(fakePendingOps.getAll().single().payload)
         assertEquals(listOf("work", "home"), payload.tags)
     }
 
@@ -167,7 +166,7 @@ class OfflineFirstRepositoryTest {
 
         assertEquals("urgent", fakeTaskDao.getById(id)!!.tags)
         val lastOp = fakePendingOps.getAll().last()
-        val payload = json.decodeFromString<TaskPayload>(lastOp.payload)
+        val payload = json.decodeFromString<TaskDto>(lastOp.payload)
         assertEquals(listOf("urgent"), payload.tags)
     }
 
@@ -177,7 +176,7 @@ class OfflineFirstRepositoryTest {
         val id = repo.createTask("Assigned", "body", TaskPriority.MEDIUM, null, emptyList(), listOf(4, 2, 4))
 
         assertEquals("4,2", fakeTaskDao.getById(id)!!.assigneeIds)
-        val payload = json.decodeFromString<TaskPayload>(fakePendingOps.getAll().single().payload)
+        val payload = json.decodeFromString<TaskDto>(fakePendingOps.getAll().single().payload)
         assertEquals(listOf(4, 2), payload.assigneeIds)
     }
 
@@ -189,7 +188,7 @@ class OfflineFirstRepositoryTest {
         repo.updateTask(id, "t", "d", TaskPriority.MEDIUM, null, emptyList(), listOf(7, 8))
 
         assertEquals("7,8", fakeTaskDao.getById(id)!!.assigneeIds)
-        val payload = json.decodeFromString<TaskPayload>(fakePendingOps.getAll().last().payload)
+        val payload = json.decodeFromString<TaskDto>(fakePendingOps.getAll().last().payload)
         assertEquals(listOf(7, 8), payload.assigneeIds)
     }
 
@@ -207,8 +206,8 @@ class OfflineFirstRepositoryTest {
         assertNull(fakeTaskDao.getById("local-1"))
         val op = fakePendingOps.getAll().single()
         assertEquals(PendingOpType.DELETE, op.opType)
-        val payload = json.decodeFromString<TaskPayload>(op.payload)
-        assertEquals(42, payload.serverId)
+        val payload = json.decodeFromString<TaskDto>(op.payload)
+        assertEquals(42, payload.id)
     }
 
     @Test
@@ -373,8 +372,8 @@ class OfflineFirstRepositoryTest {
 
         val op = fakePendingOps.getAll().single()
         assertEquals(PendingOpType.STATUS, op.opType)
-        val payload = json.decodeFromString<TaskPayload>(op.payload)
-        // The wire body built from this payload carries ONLY the status field.
+        val payload = json.decodeFromString<TaskDto>(op.payload)
+        // The drain sends ONLY the status field for this op.
         assertEquals("done", payload.status)
     }
 

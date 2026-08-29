@@ -23,6 +23,7 @@ import dev.boudy04.taskvault.data.source.local.PendingOpType
 import dev.boudy04.taskvault.data.source.local.TaskDao
 import dev.boudy04.taskvault.data.source.network.NoteRequest
 import dev.boudy04.taskvault.data.source.network.TaskApiService
+import dev.boudy04.taskvault.data.source.network.TaskDto
 import dev.boudy04.taskvault.data.joinIds
 import dev.boudy04.taskvault.data.joinTags
 import dev.boudy04.taskvault.data.parseIds
@@ -31,7 +32,6 @@ import dev.boudy04.taskvault.di.DefaultDispatcher
 import dev.boudy04.taskvault.settings.SettingsRepository
 import dev.boudy04.taskvault.sync.ReminderScheduler
 import dev.boudy04.taskvault.sync.SyncScheduler
-import dev.boudy04.taskvault.sync.TaskPayload
 import java.time.Instant
 import java.util.UUID
 import javax.inject.Inject
@@ -47,7 +47,7 @@ import retrofit2.HttpException
 
 /**
  * Offline-first [TaskRepository]: every team mutation writes to Room first, enqueues a pending op
- * carrying a serializable [TaskPayload], then asks the [SyncScheduler] for a unique sync run.
+ * carrying a serializable [TaskDto], then asks the [SyncScheduler] for a unique sync run.
  * Personal tasks are LOCAL-ONLY: Room writes never enqueue and never reach the network.
  */
 @Singleton
@@ -222,13 +222,12 @@ class DefaultTaskRepository @Inject constructor(
     }
 
     private suspend fun enqueue(type: PendingOpType, task: LocalTask) {
-        val payload = TaskPayload(
-            localId = task.id,
+        val payload = TaskDto(
+            id = task.serverId ?: 0,
             title = task.title,
             description = task.description,
             status = task.status.toApi(),
             priority = task.priority.toApi(),
-            serverId = task.serverId,
             dueAt = task.dueAt,
             tags = parseTags(task.tags),
             assigneeIds = parseIds(task.assigneeIds),

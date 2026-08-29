@@ -123,22 +123,21 @@ class SyncEngineTest {
         engine = SyncEngine(api, tasks, ops, json, settings, rejections, dispatcher)
     }
 
+    /** Wire-shape op payload (refactor Step 2: TaskPayload collapsed onto TaskDto). */
     private fun payload(
-        localId: String,
         serverId: Int? = null,
         title: String = "T",
-    ) = TaskPayload(
-        localId = localId,
+    ) = TaskDto(
+        id = serverId ?: 0,
         title = title,
         description = "D",
         status = "todo",
         priority = "high",
-        serverId = serverId,
     )
 
-    private suspend fun enqueue(type: PendingOpType, p: TaskPayload) {
+    private suspend fun enqueue(type: PendingOpType, localId: String, p: TaskDto) {
         ops.insert(
-            PendingOpEntity(taskLocalId = p.localId, opType = type, payload = json.encodeToString(p)),
+            PendingOpEntity(taskLocalId = localId, opType = type, payload = json.encodeToString(p)),
         )
     }
 
@@ -148,7 +147,7 @@ class SyncEngineTest {
     @Test
     fun drain_createsRemote_assignsServerId_clearsOp() = runTest(dispatcher) {
         tasks.upsert(localTask("l1"))
-        enqueue(PendingOpType.CREATE, payload("l1"))
+        enqueue(PendingOpType.CREATE, "l1", payload())
         api.createResult = TaskDto(id = 9, createdAt = "c9", updatedAt = "u9")
         api.listResult = listOf(TaskDto(id = 9, title = "T", status = "todo", priority = "high", createdAt = "c9", updatedAt = "u9"))
 
@@ -162,7 +161,7 @@ class SyncEngineTest {
     @Test
     fun update_usesPutWithServerId() = runTest(dispatcher) {
         tasks.upsert(localTask("l2", serverId = 5))
-        enqueue(PendingOpType.UPDATE, payload("l2", serverId = 5))
+        enqueue(PendingOpType.UPDATE, "l2", payload(serverId = 5))
         api.updateResult = TaskDto(id = 5, updatedAt = "u-new")
         api.listResult = listOf(TaskDto(id = 5, updatedAt = "u-new"))
 
@@ -175,7 +174,7 @@ class SyncEngineTest {
 
     @Test
     fun delete_remotely_then_opRemoved() = runTest(dispatcher) {
-        enqueue(PendingOpType.DELETE, payload("l3", serverId = 7))
+        enqueue(PendingOpType.DELETE, "l3", payload(serverId = 7))
 
         val outcome = engine.run()
 
@@ -187,7 +186,7 @@ class SyncEngineTest {
     @Test
     fun serverGone_404_dropsOpAndRow() = runTest(dispatcher) {
         tasks.upsert(localTask("l4", serverId = 5))
-        enqueue(PendingOpType.UPDATE, payload("l4", serverId = 5))
+        enqueue(PendingOpType.UPDATE, "l4", payload(serverId = 5))
         api.updateError = httpException(404)
 
         val outcome = engine.run()
@@ -200,7 +199,7 @@ class SyncEngineTest {
     @Test
     fun ioError_returnsConnectivityRetry_keepsOpPending() = runTest(dispatcher) {
         tasks.upsert(localTask("l5"))
-        enqueue(PendingOpType.CREATE, payload("l5"))
+        enqueue(PendingOpType.CREATE, "l5", payload())
         api.createError = IOException("offline")
 
         val outcome = engine.run()
@@ -212,7 +211,7 @@ class SyncEngineTest {
     @Test
     fun orphanRunningOp_fromKilledWorker_isReclaimedAndDrained() = runTest(dispatcher) {
         tasks.upsert(localTask("l7"))
-        enqueue(PendingOpType.CREATE, payload("l7"))
+        enqueue(PendingOpType.CREATE, "l7", payload())
         // Simulate a worker death mid-drain: the op was marked RUNNING when the process died.
         ops.updateState(ops.getAll().single().opId, PendingOpState.RUNNING)
         api.createResult = TaskDto(id = 11, createdAt = "c11", updatedAt = "u11")
@@ -230,7 +229,7 @@ class SyncEngineTest {
     @Test
     fun forbidden_memberWrite_dropsOpAndSignalsRejection() = runTest(dispatcher) {
         tasks.upsert(localTask("l8", serverId = 12))
-        enqueue(PendingOpType.UPDATE, payload("l8", serverId = 12))
+        enqueue(PendingOpType.UPDATE, "l8", payload(serverId = 12))
         api.updateError = httpException(403)
         // Pull keeps the row only while the server still lists it.
         val seen = mutableListOf<Unit>()
@@ -249,7 +248,7 @@ class SyncEngineTest {
     @Test
     fun unauthorized_stopsAsFailure() = runTest(dispatcher) {
         tasks.upsert(localTask("l6"))
-        enqueue(PendingOpType.CREATE, payload("l6"))
+        enqueue(PendingOpType.CREATE, "l6", payload())
         api.createError = httpException(401)
 
         val outcome = engine.run()
@@ -306,7 +305,7 @@ class SyncEngineTest {
     @Test
     fun statusOnly_drain_putsStatusFieldOnly_andClearsOp() = runTest(dispatcher) {
         tasks.upsert(localTask("m1", serverId = 21))
-        enqueue(PendingOpType.STATUS, payload("m1", serverId = 21).copy(status = "done"))
+        enqueue(PendingOpType.STATUS, "m1", payload(serverId = 21).copy(status = "done"))
         api.listResult = listOf(TaskDto(id = 21, status = "done", updatedAt = "u-status"))
 
         val outcome = engine.run()
@@ -341,7 +340,7 @@ class SyncEngineTest {
     @Test
     fun createOp_wireBody_isFullDto_withoutServerId() = runTest(dispatcher) {
         tasks.upsert(localTask("w1"))
-        enqueue(PendingOpType.CREATE, payload("w1"))
+        enqueue(PendingOpType.CREATE, "w1", payload())
 
         val outcome = engine.run()
 
@@ -363,7 +362,7 @@ class SyncEngineTest {
     @Test
     fun updateOp_wireBody_carriesServerIdAsId() = runTest(dispatcher) {
         tasks.upsert(localTask("w2", serverId = 5))
-        enqueue(PendingOpType.UPDATE, payload("w2", serverId = 5))
+        enqueue(PendingOpType.UPDATE, "w2", payload(serverId = 5))
 
         val outcome = engine.run()
 

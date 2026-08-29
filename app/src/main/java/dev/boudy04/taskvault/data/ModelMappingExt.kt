@@ -19,11 +19,10 @@ package dev.boudy04.taskvault.data
 import dev.boudy04.taskvault.data.source.local.LocalTask
 import dev.boudy04.taskvault.data.source.network.NoteDto
 import dev.boudy04.taskvault.data.source.network.TaskDto
-import dev.boudy04.taskvault.sync.TaskPayload
 import java.util.UUID
 
 /**
- * Single home for all Task model mappings (refactor Step 1). Four model types meet here:
+ * Single home for all Task model mappings (refactor Step 1). Three model types meet here:
  *
  * - Task: External model exposed to other layers in the architecture.
  * Obtained using `toExternal`.
@@ -32,9 +31,6 @@ import java.util.UUID
  * using `toLocal`.
  *
  * - TaskDto: Server wire shape. Mapped with `TaskDto.toLocal()` / `LocalTask.toDto()`.
- *
- * - TaskPayload: Serializable snapshot carried inside a pending op. Mapped with
- * `toDtoWithoutServerId`.
  *
  * The enum-to-wire-string mappers (`toApi`, `toTaskStatus`, `toTaskPriority`) live here too,
  * so a new task field touches exactly one mapping file.
@@ -128,18 +124,6 @@ fun LocalTask.toDto(): TaskDto = TaskDto(
     dueAt = dueAt,
     tags = parseTags(tags),
     assigneeIds = parseIds(assigneeIds),
-)
-
-// Pending-op payload / server DTO mappings used by the sync engine
-fun TaskPayload.toDtoWithoutServerId() = TaskDto(
-    id = serverId ?: 0,
-    title = title,
-    description = description,
-    status = status,
-    priority = priority,
-    dueAt = dueAt,
-    tags = tags,
-    assigneeIds = assigneeIds,
 )
 
 fun LocalTask.copyFromDto(dto: TaskDto) = copy(

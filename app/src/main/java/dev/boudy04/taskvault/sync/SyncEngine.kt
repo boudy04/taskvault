@@ -6,9 +6,9 @@ import dev.boudy04.taskvault.data.source.local.PendingOpState
 import dev.boudy04.taskvault.data.source.local.PendingOpType
 import dev.boudy04.taskvault.data.source.local.TaskDao
 import dev.boudy04.taskvault.data.source.network.TaskApiService
+import dev.boudy04.taskvault.data.source.network.TaskDto
 import dev.boudy04.taskvault.data.source.network.TaskStatusUpdate
 import dev.boudy04.taskvault.data.toLocal
-import dev.boudy04.taskvault.data.toDtoWithoutServerId
 import dev.boudy04.taskvault.di.IoDispatcher
 import dev.boudy04.taskvault.settings.SettingsRepository
 import java.io.IOException
@@ -43,12 +43,12 @@ class SyncEngine @Inject constructor(
         while (true) {
             val op = ops.nextPending() ?: return null
             ops.updateState(op.opId, PendingOpState.RUNNING)
-            val payload = json.decodeFromString<TaskPayload>(op.payload)
+            val dto = json.decodeFromString<TaskDto>(op.payload)
             try {
                 when (op.opType) {
                     PendingOpType.CREATE -> {
-                        val created = api.createTask(payload.toDtoWithoutServerId())
-                        tasks.getById(payload.localId)?.let { row ->
+                        val created = api.createTask(dto)
+                        tasks.getById(op.taskLocalId)?.let { row ->
                             tasks.upsert(
                                 row.copy(
                                     serverId = created.id,
@@ -59,23 +59,22 @@ class SyncEngine @Inject constructor(
                         }
                     }
                     PendingOpType.UPDATE -> {
-                        val target = payload.serverId ?: error("UPDATE without serverId")
-                        val updated = api.updateTask(target, payload.toDtoWithoutServerId())
-                        tasks.getById(payload.localId)?.let { row ->
+                        if (dto.id == 0) error("UPDATE without serverId")
+                        val updated = api.updateTask(dto.id, dto)
+                        tasks.getById(op.taskLocalId)?.let { row ->
                             tasks.upsert(row.copy(updatedAt = updated.updatedAt))
                         }
                     }
                     PendingOpType.STATUS -> {
                         // Assignee writes carry ONLY {"status": ...}; anything richer gets 403.
-                        val target = payload.serverId ?: error("STATUS without serverId")
-                        val updated = api.updateTaskStatus(target, TaskStatusUpdate(payload.status))
-                        tasks.getById(payload.localId)?.let { row ->
+                        if (dto.id == 0) error("STATUS without serverId")
+                        val updated = api.updateTaskStatus(dto.id, TaskStatusUpdate(dto.status))
+                        tasks.getById(op.taskLocalId)?.let { row ->
                             tasks.upsert(row.copy(updatedAt = updated.updatedAt))
                         }
                     }
                     PendingOpType.DELETE -> {
-                        val target = payload.serverId
-                        if (target != null) api.deleteTask(target)
+                        if (dto.id != 0) api.deleteTask(dto.id)
                     }
                 }
                 ops.deleteByIds(listOf(op.opId))
@@ -90,8 +89,8 @@ class SyncEngine @Inject constructor(
                         return SyncOutcome.FAILURE
                     }
                     404 -> {
-                        payload.serverId?.let { sid ->
-                            tasks.getByServerId(sid)?.let { row -> tasks.deleteById(row.id) }
+                        if (dto.id != 0) {
+                            tasks.getByServerId(dto.id)?.let { row -> tasks.deleteById(row.id) }
                         }
                         ops.deleteByIds(listOf(op.opId))
                     }

@@ -2,11 +2,9 @@ package dev.boudy04.taskvault.data
 
 import dev.boudy04.taskvault.data.source.local.LocalTask
 import dev.boudy04.taskvault.data.source.network.TaskDto
-import dev.boudy04.taskvault.data.toDtoWithoutServerId
 import dev.boudy04.taskvault.data.joinIds
 import dev.boudy04.taskvault.data.joinTags
 import dev.boudy04.taskvault.data.parseIds
-import dev.boudy04.taskvault.sync.TaskPayload
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -72,16 +70,6 @@ class TaskMappingExtTest {
     }
 
     @Test
-    fun `payload dueAt flows into outgoing dto`() {
-        val payload = TaskPayload(
-            localId = "l1", title = "t", description = "",
-            status = "todo", priority = "high", serverId = 3,
-            dueAt = "2026-08-24T09:00:00Z",
-        )
-        assertEquals("2026-08-24T09:00:00Z", payload.toDtoWithoutServerId().dueAt)
-    }
-
-    @Test
     fun `tags round trip dto local external`() {
         val dto = TaskDto(id = 5, title = "t", description = "d", tags = listOf("Work", "home"))
         val local = dto.toLocal()
@@ -101,15 +89,6 @@ class TaskMappingExtTest {
         assertEquals("urgent", tagged.tags)
         val cleared = tagged.copyFromDto(TaskDto())
         assertEquals("", cleared.tags)
-    }
-
-    @Test
-    fun `payload tags flow into outgoing dto`() {
-        val payload = TaskPayload(
-            localId = "l1", title = "t", description = "",
-            status = "todo", priority = "high", tags = listOf("a", "b"),
-        )
-        assertEquals(listOf("a", "b"), payload.toDtoWithoutServerId().tags)
     }
 
     @Test
@@ -143,16 +122,6 @@ class TaskMappingExtTest {
         assertEquals("7", assigned.assigneeIds)
         val cleared = assigned.copyFromDto(TaskDto())
         assertEquals("", cleared.assigneeIds)
-    }
-
-    @Test
-    fun `payload assigneeIds flow into outgoing dto`() {
-        val payload = TaskPayload(
-            localId = "l1", title = "t", description = "",
-            status = "todo", priority = "high",
-            assigneeIds = listOf(4, 5),
-        )
-        assertEquals(listOf(4, 5), payload.toDtoWithoutServerId().assigneeIds)
     }
 
     @Test

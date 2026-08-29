@@ -23,7 +23,6 @@ import dev.boudy04.taskvault.data.source.local.PendingOpType
 import dev.boudy04.taskvault.data.source.local.TaskDao
 import dev.boudy04.taskvault.data.source.network.NoteRequest
 import dev.boudy04.taskvault.data.source.network.TaskApiService
-import dev.boudy04.taskvault.data.source.network.toApi
 import dev.boudy04.taskvault.data.joinIds
 import dev.boudy04.taskvault.data.joinTags
 import dev.boudy04.taskvault.data.parseIds

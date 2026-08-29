@@ -17,14 +17,13 @@
 package dev.boudy04.taskvault.data
 
 import dev.boudy04.taskvault.data.source.local.LocalTask
-import dev.boudy04.taskvault.data.source.network.TaskDto
 import dev.boudy04.taskvault.data.source.network.NoteDto
-import dev.boudy04.taskvault.data.source.network.toTaskPriority
-import dev.boudy04.taskvault.data.source.network.toTaskStatus
+import dev.boudy04.taskvault.data.source.network.TaskDto
 import dev.boudy04.taskvault.sync.TaskPayload
+import java.util.UUID
 
 /**
- * Data model mapping extension functions. There are two model types:
+ * Single home for all Task model mappings (refactor Step 1). Four model types meet here:
  *
  * - Task: External model exposed to other layers in the architecture.
  * Obtained using `toExternal`.
@@ -32,7 +31,13 @@ import dev.boudy04.taskvault.sync.TaskPayload
  * - LocalTask: Internal model used to represent a task stored locally in a database. Obtained
  * using `toLocal`.
  *
- * TaskDto ↔ domain mappings live with the DTO in `data.source.network.TaskDto.kt`.
+ * - TaskDto: Server wire shape. Mapped with `TaskDto.toLocal()` / `LocalTask.toDto()`.
+ *
+ * - TaskPayload: Serializable snapshot carried inside a pending op. Mapped with
+ * `toDtoWithoutServerId`.
+ *
+ * The enum-to-wire-string mappers (`toApi`, `toTaskStatus`, `toTaskPriority`) live here too,
+ * so a new task field touches exactly one mapping file.
  */
 
 // External to local
@@ -71,6 +76,59 @@ fun LocalTask.toExternal() = Task(
 // signature on the JVM.
 @JvmName("localToExternal")
 fun List<LocalTask>.toExternal() = map(LocalTask::toExternal)
+
+// Enum to wire string
+fun TaskStatus.toApi(): String = when (this) {
+    TaskStatus.TODO -> "todo"
+    TaskStatus.IN_PROGRESS -> "in_progress"
+    TaskStatus.DONE -> "done"
+}
+
+fun TaskPriority.toApi(): String = when (this) {
+    TaskPriority.LOW -> "low"
+    TaskPriority.MEDIUM -> "medium"
+    TaskPriority.HIGH -> "high"
+}
+
+fun String.toTaskStatus(): TaskStatus = when (this) {
+    "done" -> TaskStatus.DONE
+    "in_progress" -> TaskStatus.IN_PROGRESS
+    else -> TaskStatus.TODO
+}
+
+fun String.toTaskPriority(): TaskPriority = when (this) {
+    "high" -> TaskPriority.HIGH
+    "low" -> TaskPriority.LOW
+    else -> TaskPriority.MEDIUM
+}
+
+// Server task to fresh local row (new UUID, linked by serverId)
+fun TaskDto.toLocal(): LocalTask = LocalTask(
+    id = UUID.randomUUID().toString(),
+    title = title,
+    description = description,
+    isCompleted = status == "done",
+    status = status.toTaskStatus(),
+    priority = priority.toTaskPriority(),
+    serverId = id,
+    createdAt = createdAt,
+    updatedAt = updatedAt,
+    dueAt = dueAt,
+    tags = joinTags(tags),
+    assigneeIds = joinIds(assignees.map { it.id }),
+    notes = joinNotes(notes),
+)
+
+fun LocalTask.toDto(): TaskDto = TaskDto(
+    id = serverId ?: 0,
+    title = title,
+    description = description,
+    status = status.toApi(),
+    priority = priority.toApi(),
+    dueAt = dueAt,
+    tags = parseTags(tags),
+    assigneeIds = parseIds(assigneeIds),
+)
 
 // Pending-op payload / server DTO mappings used by the sync engine
 fun TaskPayload.toDtoWithoutServerId() = TaskDto(

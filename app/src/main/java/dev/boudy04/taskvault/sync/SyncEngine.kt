@@ -7,7 +7,7 @@ import dev.boudy04.taskvault.data.source.local.PendingOpType
 import dev.boudy04.taskvault.data.source.local.TaskDao
 import dev.boudy04.taskvault.data.source.network.TaskApiService
 import dev.boudy04.taskvault.data.source.network.TaskStatusUpdate
-import dev.boudy04.taskvault.data.source.network.toLocal
+import dev.boudy04.taskvault.data.toLocal
 import dev.boudy04.taskvault.data.toDtoWithoutServerId
 import dev.boudy04.taskvault.di.IoDispatcher
 import dev.boudy04.taskvault.settings.SettingsRepository

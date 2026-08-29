@@ -6,8 +6,6 @@ import dev.boudy04.taskvault.data.toDtoWithoutServerId
 import dev.boudy04.taskvault.data.joinIds
 import dev.boudy04.taskvault.data.joinTags
 import dev.boudy04.taskvault.data.parseIds
-import dev.boudy04.taskvault.data.source.network.toDto
-import dev.boudy04.taskvault.data.source.network.toLocal
 import dev.boudy04.taskvault.sync.TaskPayload
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

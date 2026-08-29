@@ -40,6 +40,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import java.time.Clock
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -148,4 +149,14 @@ object WorkManagerModule {
     @Singleton
     fun provideAlarmManager(@ApplicationContext context: Context): AlarmManager =
         context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+}
+
+@Module
+@InstallIn(SingletonComponent::class)
+object TimeModule {
+
+    /** Epoch-millis source, identical to the previous direct System.currentTimeMillis() reads. */
+    @Provides
+    @Singleton
+    fun provideClock(): Clock = Clock.systemUTC()
 }

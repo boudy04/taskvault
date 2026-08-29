@@ -30,9 +30,7 @@ import dev.boudy04.taskvault.data.parseIds
 import dev.boudy04.taskvault.data.parseTags
 import dev.boudy04.taskvault.di.DefaultDispatcher
 import dev.boudy04.taskvault.settings.SettingsRepository
-import dev.boudy04.taskvault.sync.ReminderScheduler
 import dev.boudy04.taskvault.sync.SyncScheduler
-import java.time.Instant
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -55,7 +53,7 @@ class DefaultTaskRepository @Inject constructor(
     private val localDataSource: TaskDao,
     private val pendingOps: PendingOpDao,
     private val syncScheduler: SyncScheduler,
-    private val reminders: ReminderScheduler,
+    private val reminderEngine: ReminderEngine,
     private val api: TaskApiService,
     private val settings: SettingsRepository,
     private val json: Json,
@@ -90,7 +88,7 @@ class DefaultTaskRepository @Inject constructor(
         )
         localDataSource.upsert(task)
         PendingOpClassifier.forCreate(isPersonal = isPersonal)?.let { enqueue(it, task) }
-        scheduleReminder(task.id, task.title, task.dueAt)
+        reminderEngine.onDueAtSet(task.id, task.title, task.dueAt)
         return taskId
     }
 
@@ -117,8 +115,8 @@ class DefaultTaskRepository @Inject constructor(
         // offline queueing per-field, revisit the payload here
         PendingOpClassifier.forUpdate(isPersonal = updated.isPersonal)?.let { enqueue(it, updated) }
         // dueAt replaces or clears wholesale, so drop any old alarm first
-        reminders.cancel(taskId)
-        scheduleReminder(taskId, updated.title, updated.dueAt)
+        reminderEngine.onCancel(taskId)
+        reminderEngine.onDueAtSet(taskId, updated.title, updated.dueAt)
     }
 
     override suspend fun completeTask(taskId: String) = setStatus(taskId, TaskStatus.DONE)
@@ -138,10 +136,10 @@ class DefaultTaskRepository @Inject constructor(
             hasServerId = updated.serverId != null,
         )?.let { enqueue(it, updated) }
         if (status == TaskStatus.DONE) {
-            reminders.cancel(taskId)
+            reminderEngine.onCancel(taskId)
         } else {
             // re-activation keeps the stored dueAt; re-arm only while it's still future
-            scheduleReminder(taskId, updated.title, updated.dueAt)
+            reminderEngine.onDueAtSet(taskId, updated.title, updated.dueAt)
         }
     }
 
@@ -149,7 +147,7 @@ class DefaultTaskRepository @Inject constructor(
         val task = localDataSource.getById(taskId) ?: return
         pendingOps.clearForTask(taskId) // drop stale ops for this row before queueing the tombstone
         localDataSource.deleteById(taskId) // UI reflects deletion instantly
-        reminders.cancel(taskId)
+        reminderEngine.onCancel(taskId)
         PendingOpClassifier.forDelete(
             isPersonal = task.isPersonal,
             hasServerId = task.serverId != null,
@@ -234,15 +232,6 @@ class DefaultTaskRepository @Inject constructor(
             PendingOpEntity(taskLocalId = task.id, opType = type, payload = json.encodeToString(payload)),
         )
         syncScheduler.requestSync()
-    }
-
-    /** Arms the reminder when the stored due ISO parses to a future instant. */
-    private fun scheduleReminder(localId: String, title: String, dueAt: String?) {
-        if (dueAt == null) return
-        val millis = runCatching { Instant.parse(dueAt).toEpochMilli() }.getOrNull() ?: return
-        if (millis > System.currentTimeMillis()) {
-            reminders.schedule(localId, title, millis)
-        }
     }
 
     private companion object {

@@ -39,6 +39,7 @@ import dev.boudy04.taskvault.settings.FakeSettingsRepository
 import dev.boudy04.taskvault.data.source.network.TaskStatusUpdate
 import dev.boudy04.taskvault.settings.Session
 import retrofit2.Response
+import java.time.Clock
 import java.time.Instant
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -102,7 +103,7 @@ class OfflineFirstRepositoryTest {
             localDataSource = fakeTaskDao,
             pendingOps = fakePendingOps,
             syncScheduler = syncRequests,
-            reminders = reminders,
+            reminderEngine = ReminderEngine(reminders, Clock.systemUTC()),
             api = RecordingApi(),
             settings = settings,
             json = json,

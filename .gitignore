@@ -1,4 +1,4 @@
-*.iml
+﻿*.iml
 .gradle
 local.properties
 .idea
@@ -10,3 +10,5 @@ captures
 
 hs_err_pid*.log
 replay_pid*.log
+.omo/
+# opencode agent session state

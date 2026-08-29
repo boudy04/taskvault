@@ -39,6 +39,7 @@ import javax.inject.Inject
 data class StatisticsUiState(
     val isEmpty: Boolean = false,
     val isLoading: Boolean = false,
+    val isError: Boolean = false,
     val activeTasksPercent: Float = 0f,
     val completedTasksPercent: Float = 0f,
     val syncTotal: Int = 0,
@@ -81,8 +82,7 @@ class StatisticsViewModel @Inject constructor(
                 StatisticsUiState(isLoading = true, isEmpty = true)
             }
             is Async.Error -> {
-                // TODO: Show error message?
-                StatisticsUiState(isEmpty = true, isLoading = false)
+                StatisticsUiState(isEmpty = true, isLoading = false, isError = true)
             }
             is Async.Success -> {
                 val stats = getActiveAndCompletedStats(taskLoad.data)

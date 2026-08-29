@@ -119,7 +119,6 @@ dependencies {
     implementation(libs.androidx.glance.appwidget)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.timber)
-    implementation(libs.androidx.test.espresso.idling.resources)
 
     // Architecture Components
     implementation(libs.room.runtime)
@@ -205,8 +204,6 @@ dependencies {
     androidTestImplementation(libs.androidx.test.espresso.core)
     androidTestImplementation(libs.androidx.test.espresso.contrib)
     androidTestImplementation(libs.androidx.test.espresso.intents)
-    androidTestImplementation(libs.androidx.test.espresso.idling.resources)
-    androidTestImplementation(libs.androidx.test.espresso.idling.concurrent)
     androidTestImplementation(project(":shared-test"))
 
     // AndroidX Test - Hilt testing

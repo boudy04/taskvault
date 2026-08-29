@@ -44,10 +44,6 @@ class FakeTaskDao(initialTasks: List<LocalTask>? = emptyList()) : TaskDao {
         _tasks?.put(task.id, task)
     }
 
-    override suspend fun updateCompleted(taskId: String, completed: Boolean) {
-        _tasks?.get(taskId)?.let { it.isCompleted = completed }
-    }
-
     override suspend fun deleteById(taskId: String): Int {
         return if (_tasks?.remove(taskId) == null) {
             0

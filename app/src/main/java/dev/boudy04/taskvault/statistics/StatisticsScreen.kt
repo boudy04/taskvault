@@ -57,6 +57,7 @@ fun StatisticsScreen(
         StatisticsContent(
             loading = uiState.isLoading,
             empty = uiState.isEmpty,
+            isError = uiState.isError,
             activeTasksPercent = uiState.activeTasksPercent,
             completedTasksPercent = uiState.completedTasksPercent,
             syncTotal = uiState.syncTotal,
@@ -72,6 +73,7 @@ fun StatisticsScreen(
 private fun StatisticsContent(
     loading: Boolean,
     empty: Boolean,
+    isError: Boolean = false,
     activeTasksPercent: Float,
     completedTasksPercent: Float,
     syncTotal: Int,
@@ -91,7 +93,9 @@ private fun StatisticsContent(
         modifier = modifier,
         emptyContent = {
             Text(
-                text = stringResource(id = R.string.statistics_no_tasks),
+                text = stringResource(
+                    id = if (isError) R.string.loading_tasks_error else R.string.statistics_no_tasks
+                ),
                 modifier = commonModifier
             )
         }

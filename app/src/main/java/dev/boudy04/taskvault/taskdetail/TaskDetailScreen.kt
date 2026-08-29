@@ -48,6 +48,7 @@ import dev.boudy04.taskvault.R
 import dev.boudy04.taskvault.data.Task
 import dev.boudy04.taskvault.data.TaskStatus
 import dev.boudy04.taskvault.util.LoadingContent
+import dev.boudy04.taskvault.util.SnackbarHostEffect
 import dev.boudy04.taskvault.util.TaskDetailTopAppBar
 
 @Composable
@@ -86,13 +87,11 @@ fun TaskDetailScreen(
         )
 
         // Check for user messages to display on the screen
-        uiState.userMessage?.let { userMessage ->
-            val snackbarText = stringResource(userMessage)
-            LaunchedEffect(snackbarHostState, viewModel, userMessage, snackbarText) {
-                snackbarHostState.showSnackbar(snackbarText)
-                viewModel.snackbarMessageShown()
-            }
-        }
+        SnackbarHostEffect(
+            userMessage = uiState.userMessage,
+            snackbarHostState = snackbarHostState,
+            onMessageShown = viewModel::snackbarMessageShown,
+        )
 
         // Check if the task is deleted and call onDeleteTask
         LaunchedEffect(uiState.isTaskDeleted) {

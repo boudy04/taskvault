@@ -78,15 +78,6 @@ interface TaskDao {
     suspend fun upsertAll(tasks: List<LocalTask>)
 
     /**
-     * Update the complete status of a task
-     *
-     * @param taskId id of the task
-     * @param completed status to be updated
-     */
-    @Query("UPDATE task SET isCompleted = :completed WHERE id = :taskId")
-    suspend fun updateCompleted(taskId: String, completed: Boolean)
-
-    /**
      * Delete a task by id.
      *
      * @return the number of tasks deleted. This should always be 1.

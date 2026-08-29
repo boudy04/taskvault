@@ -1,6 +1,6 @@
 # TaskVault Offline-First Client Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Ship `boudy04/taskvault` — a rebranded Kotlin/Compose Android client that consumes the deployed FastAPI task-api through Retrofit with a full offline-first mutation queue (Room source of truth + WorkManager sync).
 

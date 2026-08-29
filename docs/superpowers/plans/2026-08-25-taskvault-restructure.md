@@ -1,5 +1,8 @@
 # TaskVault Restructuring Implementation Plan
 
+> **Status (2026-08-30):** partially delivered. DONE: Task 3 Step 4 (commit 7be9de7 -- payload is TaskDto, TaskPayload envelope removed), Task 8 Step 2 (8c2caff, util/SnackbarEffect.kt), Task 12 Steps 1/2/4 (8c2caff), Task 12 Step 5 README count (now 145). OPEN: Tasks 1, 2, 4, 5, 6, 7, 9, 10, 11; Task 3 Steps 1-3/5 (the IN_PROGRESS fix is deliberately deferred -- current behavior is pinned by a characterization test); Task 12 Steps 3/5-7 (JaCoCo threshold, lint.xml baseline). See docs/refactor-handover.md and docs/refactor-issue-log.md.
+
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Restructure TaskVault so the data model, sync integrity, repository boundaries, UI-state modeling, and cross-cutting concerns are coherent, testable, and free of the correctness bugs found in exploration — without changing user-facing behavior.
@@ -130,7 +133,7 @@ git commit -m "refactor: centralize Throwable→message mapping, use Timber"
 - [ ] **Step 1: Fix the IN_PROGRESS bug** — `toDomain()` must read `this.status` directly (do not rebuild from `isCompleted`). Keep both `isCompleted` and `status`; derive `isCompleted = status == DONE` on write.
 - [ ] **Step 2: Create `data/Mappers.kt`** with the four functions above; delete `LocalTask.copyFromDto()`, `TaskPayload.toDtoWithoutServerId()`, and the dead `Task.toLocal()` overloads.
 - [ ] **Step 3: Rewrite `DefaultTaskRepository`** create/update to call `task.toLocal()` and `task.toDto()`; remove inline `joinTags`/`joinIds` duplication.
-- [ ] **Step 4: Repoint `PendingOpEntity.payload`** to serialize `TaskDto` (reuse `TaskPayload` only as the envelope holding `opType` + `TaskDto` JSON).
+- [x] **Step 4: Repoint `PendingOpEntity.payload`** to serialize `TaskDto` (reuse `TaskPayload` only as the envelope holding `opType` + `TaskDto` JSON).  -- DONE 2026-08-30: done 7be9de7 -- superseded design: TaskPayload envelope removed entirely, payload column IS TaskDto JSON, rows resolved via op.taskLocalId
 - [ ] **Step 5: Tests**
 Run: `./gradlew :app:testDebugUnitTest --tests "*MappingExtTest" --tests "*TaskMapping*"`
 Expected: existing `TaskMappingExtTest` (16 tests) still pass; add 1 test asserting IN_PROGRESS survives `LocalTask → Task → LocalTask`.
@@ -247,7 +250,7 @@ git commit -m "refactor: route members through repository, domain Member model"
 - Produces: `sealed interface UiEvent` (e.g. `ShowSnackbar(Int)`, `Navigate(String)`); VMs expose `val events: SharedFlow<UiEvent>`; composables collect with `LaunchedEffect`. Replace the nullable-`Int`-in-`StateFlow` snackbar pattern.
 
 - [ ] **Step 1: Create `core/UiEvent.kt`** and migrate `TasksViewModel` + `AddEditTaskViewModel` snackbar state to a `SharedFlow<UiEvent>`.
-- [ ] **Step 2: Extract a `SnackbarHost` collector** composable in `ComposeUtils.kt` used by all 4 screens to delete the duplicated `LaunchedEffect` boilerplate.
+- [x] **Step 2: Extract a `SnackbarHost` collector** composable in `ComposeUtils.kt` used by all 4 screens to delete the duplicated `LaunchedEffect` boilerplate.  -- DONE 2026-08-30: done 8c2caff -- util/SnackbarEffect.kt collector
 - [ ] **Step 3: Move business logic out of composables** into VMs: overdue check (`TasksScreen.kt:691`), person name lookup (`:426`), assignee color hash (`:803`), sync-% math (`StatisticsScreen.kt:116`), `assigneeNames` (`AddEditTaskScreen.kt:256`). Add corresponding VM tests.
 - [ ] **Step 4: Fix `AddEditTaskScreen` no-op loading branch** — show real `uiState.isLoading` or remove the dead `PullToRefreshBox`.
 - [ ] **Step 5: Tests**
@@ -324,10 +327,10 @@ git commit -m "refactor: shared biometric prompt launcher"
 
 **Interfaces:** none (build/config only).
 
-- [ ] **Step 1: Remove ~20 dead catalog entries** (`accompanist-*`, `appcompat`, `window-manager`, `metrics`, `tracing`, `core-splashscreen`, `startup`, `uiautomator`, `macrobenchmark`, `protobuf`, `kotlinx-datetime`, `material3-window-size-class`, `runtime-livedata`, `runtime-tracing`, `jacoco`, stale `spotless=5.12.5`).
-- [ ] **Step 2: Fix spotless version mismatch** (catalog vs init script → pick 6.25.0).
+- [x] **Step 1: Remove ~20 dead catalog entries** (`accompanist-*`, `appcompat`, `window-manager`, `metrics`, `tracing`, `core-splashscreen`, `startup`, `uiautomator`, `macrobenchmark`, `protobuf`, `kotlinx-datetime`, `material3-window-size-class`, `runtime-livedata`, `runtime-tracing`, `jacoco`, stale `spotless=5.12.5`).  -- DONE 2026-08-30: done 8c2caff -- verified: no dead catalog entries remain
+- [x] **Step 2: Fix spotless version mismatch** (catalog vs init script → pick 6.25.0).  -- DONE 2026-08-30: resolved -- spotless removed from the catalog entirely
 - [ ] **Step 3: Add JaCoCo coverage threshold** (fail < 70%) in `app/build.gradle.kts`.
-- [ ] **Step 4: Move `SimpleCountingIdlingResource`** from `main` to `androidTest`.
+- [x] **Step 4: Move `SimpleCountingIdlingResource`** from `main` to `androidTest`.  -- DONE 2026-08-30: superseded 8c2caff -- SimpleCountingIdlingResource removed outright
 - [ ] **Step 5: Fix `README.md` test count** (60 → ~112) and add `lint.xml` baseline.
 - [ ] **Step 6: Build + full check**
 Run: `./gradlew lintDebug testDebugUnitTest connectedDebugAndroidTest`

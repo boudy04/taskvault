@@ -1,6 +1,6 @@
 # TaskVault Offline-First Client Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Ship `boudy04/taskvault` — a rebranded Kotlin/Compose Android client that consumes the deployed FastAPI task-api through Retrofit with a full offline-first mutation queue (Room source of truth + WorkManager sync).
 
@@ -34,7 +34,7 @@
 **Interfaces:**
 - Produces: git repo at `p4` whose history starts with upstream baseline import.
 
-- [ ] **Step 1: Clone and detach**
+- [x] **Step 1: Clone and detach**
 
 ```powershell
 git clone https://github.com/android/architecture-samples.git p4
@@ -43,7 +43,7 @@ git -C p4 init
 git -C p4 checkout -b main
 ```
 
-- [ ] **Step 2: Move spec + plan into the repo**
+- [x] **Step 2: Move spec + plan into the repo**
 
 ```powershell
 New-Item -ItemType Directory -Force p4\docs\superpowers\specs, p4\docs\superpowers\plans | Out-Null
@@ -53,12 +53,12 @@ Copy-Item "docs\superpowers\plans\2026-08-22-taskvault-offline-client.md" p4\doc
 
 (The plan file itself is copied after it exists — if executing this plan from the workspace root, re-run Step 2's Copy-Item lines.)
 
-- [ ] **Step 3: Verify toolchain builds baseline**
+- [x] **Step 3: Verify toolchain builds baseline**
 
 Run (from `p4`): `.\gradlew help --quiet`
 Expected: BUILD SUCCESSFUL. If JDK mismatch, install JDK 17 and set `JAVA_HOME`.
 
-- [ ] **Step 4: Commit baseline**
+- [x] **Step 4: Commit baseline**
 
 ```bash
 git add -A && git commit -m "chore: import android/architecture-samples baseline"
@@ -74,7 +74,7 @@ git add -A && git commit -m "chore: import android/architecture-samples baseline
 - Consumes: baseline repo from Task 1.
 - Produces: every Kotlin file declares `package dev.boudy04.taskvault...`; build coordinates updated.
 
-- [ ] **Step 1: Move source trees**
+- [x] **Step 1: Move source trees**
 
 ```powershell
 $sets = @{ "main"="java"; "test"="java"; "androidTest"="java" }
@@ -85,7 +85,7 @@ git mv shared-test/src/main/java/com/example/android/architecture/blueprints/tod
 Remove-Item -Recurse -Force app/src/main/java/com/example, app/src/test/java/com/example, app/src/androidTest/java/com/example, shared-test/src/main/java/com/example
 ```
 
-- [ ] **Step 2: Rewrite package/import references**
+- [x] **Step 2: Rewrite package/import references**
 
 ```powershell
 Get-ChildItem -Recurse -Include *.kt,*.kts,*.xml -Path app, shared-test |
@@ -96,7 +96,7 @@ Get-ChildItem -Recurse -Include *.kt,*.kts,*.xml -Path app, shared-test |
   }
 ```
 
-- [ ] **Step 3: Update gradle coordinates**
+- [x] **Step 3: Update gradle coordinates**
 
 In `app/build.gradle.kts`:
 
@@ -106,16 +106,16 @@ applicationId = "dev.boudy04.taskvault"
 testInstrumentationRunner = "dev.boudy04.taskvault.CustomTestRunner"
 ```
 
-- [ ] **Step 4: App display name**
+- [x] **Step 4: App display name**
 
 `app/src/main/res/values/strings.xml`: `<string name="app_name">TaskVault</string>` (repeat in any `values-*` variants present).
 
-- [ ] **Step 5: Verify**
+- [x] **Step 5: Verify**
 
 Run: `.\gradlew assembleDebug testDebugUnitTest --quiet`
 Expected: BUILD SUCCESSFUL, all upstream unit tests pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A && git commit -m "chore: rebrand to dev.boudy04.taskvault / TaskVault"
@@ -129,7 +129,7 @@ git add -A && git commit -m "chore: rebrand to dev.boudy04.taskvault / TaskVault
 **Interfaces:**
 - Produces: catalog aliases `retrofit-core`, `retrofit-kotlinx-serialization-converter`, `okhttp-logging-interceptor`, `okhttp-mockwebserver`, `robolectric` unused; app compiles with serialization plugin; WorkManager resolves workers via Hilt factory.
 
-- [ ] **Step 1: Catalog entries**
+- [x] **Step 1: Catalog entries**
 
 Append to `[libraries]` in `gradle/libs.versions.toml`:
 
@@ -142,7 +142,7 @@ okhttp-mockwebserver = { group = "com.squareup.okhttp3", name = "mockwebserver",
 
 (`androidx-work-ktx`, `androidx-work-testing`, `hilt-ext-work`, `hilt-ext-compiler`, `androidx-dataStore-preferences`, `kotlin-serialization` plugin already exist in this catalog.)
 
-- [ ] **Step 2: App module wiring**
+- [x] **Step 2: App module wiring**
 
 In `app/build.gradle.kts` plugins block add:
 
@@ -166,7 +166,7 @@ testImplementation(libs.androidx.work.testing)
 
 Note: catalog alias `retrofit-kotlinx-serialization-converter` maps to accessor `libs.retrofit.kotlinx.serialization.converter`.
 
-- [ ] **Step 3: Application class on-demand WorkManager init**
+- [x] **Step 3: Application class on-demand WorkManager init**
 
 Rename `TodoApplication.kt` → `TaskVaultApplication.kt`; manifest `android:name` updated to match:
 
@@ -183,7 +183,7 @@ class TaskVaultApplication : Application(), Configuration.Provider {
 }
 ```
 
-- [ ] **Step 4: Remove default WorkManager initializer**
+- [x] **Step 4: Remove default WorkManager initializer**
 
 Inside `<application>` in `AndroidManifest.xml` add:
 
@@ -200,12 +200,12 @@ Inside `<application>` in `AndroidManifest.xml` add:
 
 (add `xmlns:tools="http://schemas.android.com/tools"` to `<manifest>` if missing)
 
-- [ ] **Step 5: Verify**
+- [x] **Step 5: Verify**
 
 Run: `.\gradlew assembleDebug --quiet`
 Expected: BUILD SUCCESSFUL.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A && git commit -m "chore: add retrofit/workmanager/datastore deps and hilt worker init"
@@ -221,7 +221,7 @@ git add -A && git commit -m "chore: add retrofit/workmanager/datastore deps and 
 **Interfaces:**
 - Produces: `enum class TaskStatus { TODO, IN_PROGRESS, DONE }`, `enum class TaskPriority { LOW, MEDIUM, HIGH }`; domain `Task(status: TaskStatus = TaskStatus.TODO, priority: TaskPriority = TaskPriority.MEDIUM)` with computed `isCompleted`.
 
-- [ ] **Step 1: Write failing mapper tests**
+- [x] **Step 1: Write failing mapper tests**
 
 `app/src/test/java/dev/boudy04/taskvault/data/TaskMappingExtTest.kt`:
 
@@ -260,12 +260,12 @@ class TaskMappingExtTest {
 }
 ```
 
-- [ ] **Step 2: Verify compile failure**
+- [x] **Step 2: Verify compile failure**
 
 Run: `.\gradlew :app:compileDebugUnitTestKotlin --quiet`
 Expected: FAIL — `TaskStatus`/`priority` unresolved, `Task` has no such parameters.
 
-- [ ] **Step 3: Implement enums + Task refactor**
+- [x] **Step 3: Implement enums + Task refactor**
 
 `data/TaskStatus.kt`:
 
@@ -307,7 +307,7 @@ data class Task(
 }
 ```
 
-- [ ] **Step 4: Fix all construction sites**
+- [x] **Step 4: Fix all construction sites**
 
 Find them:
 
@@ -350,12 +350,12 @@ fun NetworkTask.toLocal() = LocalTask(
 
 …adjusting to whatever keeps `shared-test`'s fakes compiling; expect small edits in `FakeDataSource` and repository/viewmodel tests constructing `Task(isCompleted = …)`.
 
-- [ ] **Step 5: Verify green**
+- [x] **Step 5: Verify green**
 
 Run: `.\gradlew testDebugUnitTest --quiet`
 Expected: PASS including the three new tests.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A && git commit -m "feat: extend domain Task with status and priority"
@@ -372,7 +372,7 @@ git add -A && git commit -m "feat: extend domain Task with status and priority"
 - Consumes: `TaskStatus`/`TaskPriority` from Task 4.
 - Produces: `LocalTask(id,title,description,isCompleted,status,priority,serverId:Int?,createdAt:String?,updatedAt:String?)`; `PendingOpEntity(opId:Long, taskLocalId:String, opType:PendingOpType, payload:String, state:PendingOpState, attempts:Int, enqueuedAt:Long)`; `PendingOpDao` methods used by Tasks 8–9: `insert`, `nextPending()`, `updateState(opId,state)`, `deleteByIds(List<Long>)`, `getAll()`, `clearForTask(String)`, `countPending():Int`, `observePendingTaskIds(): Flow<List<String>>`; `TaskDao.getByServerId(Int): LocalTask?`, `TaskDao.getCompleted(): List<LocalTask>`; DB version bumped once with destructive fallback.
 
-- [ ] **Step 1: Write failing DAO instrumented test**
+- [x] **Step 1: Write failing DAO instrumented test**
 
 `PendingOpDaoTest.kt`:
 
@@ -434,12 +434,12 @@ class PendingOpDaoTest {
 }
 ```
 
-- [ ] **Step 2: Verify red**
+- [x] **Step 2: Verify red**
 
 Run: `.\gradlew :app:compileDebugAndroidTestKotlin --quiet`
 Expected: FAIL — types unresolved.
 
-- [ ] **Step 3: Implement entities, converters, DAOs**
+- [x] **Step 3: Implement entities, converters, DAOs**
 
 `data/source/local/Converters.kt`:
 
@@ -559,13 +559,13 @@ suspend fun deleteUnsyncedOrphans(): Int
 
 `TodoDatabase.kt`: `version` bumped by 1, entities list gains `PendingOpEntity::class`, annotate `@TypeConverters(Converters::class)`, add `abstract fun pendingOpDao(): PendingOpDao`. Where the database is built (search `databaseBuilder`), append `.fallbackToDestructiveMigration()`.
 
-- [ ] **Step 4: Verify green (device/emulator)**
+- [x] **Step 4: Verify green (device/emulator)**
 
 Run: `.\gradlew connectedDebugAndroidTest --quiet` (or defer execution to CI emulator job; compile check locally:)
 Run: `.\gradlew :app:compileDebugAndroidTestKotlin assembleDebug --quiet`
 Expected: PASS / BUILD SUCCESSFUL.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A && git commit -m "feat: room schema v2 with offline pending-op queue"
@@ -580,7 +580,7 @@ git add -A && git commit -m "feat: room schema v2 with offline pending-op queue"
 **Interfaces:**
 - Produces: `data class ServerConfig(val baseUrl: String, val token: String)`; `interface SettingsRepository { val config: Flow<ServerConfig>; suspend fun current(): ServerConfig; suspend fun setConfig(config: ServerConfig) }`; Hilt binding; defaults baseUrl=`https://prject-cv-production.up.railway.app`, token=`dev-token`.
 
-- [ ] **Step 1: Failing test**
+- [x] **Step 1: Failing test**
 
 ```kotlin
 package dev.boudy04.taskvault.settings
@@ -625,11 +625,11 @@ class DataStoreSettingsRepositoryTest {
 }
 ```
 
-- [ ] **Step 2: Red**
+- [x] **Step 2: Red**
 
 Run: `.\gradlew :app:compileDebugUnitTestKotlin --quiet` → FAIL (unresolved).
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `settings/ServerConfig.kt`:
 
@@ -719,11 +719,11 @@ object SettingsModule {
 }
 ```
 
-- [ ] **Step 4: Green**
+- [x] **Step 4: Green**
 
 Run: `.\gradlew testDebugUnitTest --quiet` → PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A && git commit -m "feat: datastore-backed server settings repository"
@@ -741,7 +741,7 @@ git add -A && git commit -m "feat: datastore-backed server settings repository"
 - Consumes: `SettingsRepository` (Task 6).
 - Produces: `interface TaskApiService { listTasks(status:String?):List<TaskDto>; getTask(id:Int):TaskDto; createTask(TaskDto):TaskDto; updateTask(id:Int,TaskDto):TaskDto; deleteTask(id:Int):Response<Unit> }`; `@Serializable TaskDto(id:Int, title, description, status:String, priority:String, created_at, updated_at)`; Hilt providers for `OkHttpClient`, `Retrofit`, `TaskApiService`; DTO↔domain mapping helpers `TaskDto.toLocal(newLocalId:String): LocalTask` and `LocalTask.toDto(): TaskDto`.
 
-- [ ] **Step 1: Failing test against MockWebServer**
+- [x] **Step 1: Failing test against MockWebServer**
 
 ```kotlin
 package dev.boudy04.taskvault.data.source.network
@@ -824,11 +824,11 @@ class RetrofitNetworkDataSourceTest {
 
 (import `okhttp3.MediaType.Companion.toMediaType`.)
 
-- [ ] **Step 2: Red**
+- [x] **Step 2: Red**
 
 Run: `.\gradlew :app:compileDebugUnitTestKotlin --quiet` → FAIL (types unresolved).
 
-- [ ] **Step 3: Implement DTO, API, interceptors**
+- [x] **Step 3: Implement DTO, API, interceptors**
 
 `TaskDto.kt`:
 
@@ -1020,11 +1020,11 @@ fun provideTaskApi(retrofit: Retrofit): TaskApiService = retrofit.create(TaskApi
 
 Delete `NetworkDataSource.kt`, `NetworkTask.kt`, `TaskNetworkDataSource.kt`; strip their imports/usages (`ModelMappingExt` loses `toNetwork` functions; `DefaultTaskRepository` still references `NetworkDataSource` until Task 8 — temporarily keep compilation by deleting its `saveTasksToNetwork` body contents and field, which Task 8 replaces anyway; simplest interim edit: remove the field + method + call sites).
 
-- [ ] **Step 4: Green**
+- [x] **Step 4: Green**
 
 Run: `.\gradlew testDebugUnitTest assembleDebug --quiet` → PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A && git commit -m "feat: retrofit task-api stack with dynamic base url and bearer auth"
@@ -1042,7 +1042,7 @@ git add -A && git commit -m "feat: retrofit task-api stack with dynamic base url
 - Consumes: `PendingOpDao`, `TaskDao.getByServerId/getCompleted`, `TaskDto.toDto/toLocal` helpers.
 - Produces: `TaskRepository` gains `fun getPendingSyncIdsStream(): Flow<Set<String>>`; `createTask/updateTask` gain `priority: TaskPriority` parameter; `SyncScheduler` functional interface `requestSync()` bound to WorkManager impl (unique work `taskvault_sync`, CONNECTED constraint, EXPONENTIAL backoff 30s); `TaskPayload(localId,title,description,status,priority,serverId)` serializable snapshot.
 
-- [ ] **Step 1: Failing repository tests**
+- [x] **Step 1: Failing repository tests**
 
 `OfflineFirstRepositoryTest.kt` (fakes defined in-file):
 
@@ -1138,11 +1138,11 @@ fun clearCompletedTasks_deletesEachLocally() = runTest { /* two done tasks -> bo
 
 Helper `repoWithFakes()` wires `DefaultTaskRepository(fakeTaskDao, fakePendingOps, recordingScheduler, json, StandardTestDispatcher(testScheduler))`.
 
-- [ ] **Step 2: Red**
+- [x] **Step 2: Red**
 
 Run: `.\gradlew :app:compileDebugUnitTestKotlin --quiet` → FAIL (interface members missing).
 
-- [ ] **Step 3: Implement scheduler, payload, repository**
+- [x] **Step 3: Implement scheduler, payload, repository**
 
 `sync/SyncScheduler.kt`:
 
@@ -1299,11 +1299,11 @@ class DefaultTaskRepository @Inject constructor(
 
 Constructor drops `networkDataSource` + `@ApplicationScope scope`; fix `CoroutinesModule` usages accordingly (annotation stays for other consumers). DI binding: `@Binds abstract fun bindSyncScheduler(impl: WorkManagerSyncScheduler): SyncScheduler`. Provide `Json` via `@Provides @Singleton fun provideJson(): Json = Json { ignoreUnknownKeys = true }`. Provide `WorkManager.getInstance(context)` via SettingsModule-style provider. Update `AddEditTaskViewModel`/tests call sites for the `priority` parameter (thread a selected-priority state through the edit screen — full UI in Task 10; here default `TaskPriority.MEDIUM` keeps call sites compiling except where tests exercise it).
 
-- [ ] **Step 4: Green**
+- [x] **Step 4: Green**
 
 Run: `.\gradlew testDebugUnitTest --quiet` → PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A && git commit -m "feat: offline-first repository with pending-op queue"
@@ -1319,7 +1319,7 @@ git add -A && git commit -m "feat: offline-first repository with pending-op queu
 - Consumes: `TaskApiService`, `TaskDao`, `PendingOpDao`, `TaskPayload`, DTO helpers.
 - Produces: `class SyncEngine(api, tasks, ops, json, io)` with `suspend fun run(): SyncOutcome` where `enum class SyncOutcome { SUCCESS, RETRY, FAILURE }`; `@HiltWorker class SyncWorker(...) : CoroutineWorker` delegating to engine (`RETRY` → `Result.retry()`, `FAILURE` → `Result.failure()`, else success).
 
-- [ ] **Step 1: Failing engine tests** (fakes: `FakeApi` records calls/scripted responses incl. throwing `IOException` and `HttpException`; reuse FakeTaskDao/FakePendingOpDao fixtures from Task 8)
+- [x] **Step 1: Failing engine tests** (fakes: `FakeApi` records calls/scripted responses incl. throwing `IOException` and `HttpException`; reuse FakeTaskDao/FakePendingOpDao fixtures from Task 8)
 
 Cases:
 1. `drain_createsRemote_assignsServerId_clearsOp` — CREATE op → POST returns dto id 9 → row.serverId == 9, queue empty.
@@ -1330,9 +1330,9 @@ Cases:
 6. `unauthorized_stopsAsFailure` — 401 → outcome FAILURE, op stays PENDING.
 7. `afterDrain_pullMergesServer_deletesVanishedRows_unlessPendingOpsProtectThem` — remote list lacks row X (no pending ops) → row X gone; remote adds Y → inserted with serverId.
 
-- [ ] **Step 2: Red** — `.\gradlew :app:compileDebugUnitTestKotlin --quiet` → FAIL.
+- [x] **Step 2: Red** — `.\gradlew :app:compileDebugUnitTestKotlin --quiet` → FAIL.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `sync/SyncOutcome.kt`:
 
@@ -1458,11 +1458,11 @@ class SyncWorker @AssistedInject constructor(
 }
 ```
 
-- [ ] **Step 4: Green**
+- [x] **Step 4: Green**
 
 Run: `.\gradlew testDebugUnitTest --quiet` → PASS (all seven engine cases).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A && git commit -m "feat: workmanager sync worker draining offline queue with pull reconcile"
@@ -1479,13 +1479,13 @@ git add -A && git commit -m "feat: workmanager sync worker draining offline queu
 - Consumes: `TaskRepository.getPendingSyncIdsStream()`, `createTask/updateTask(priority)` from Task 8; `SettingsRepository` from Task 6.
 - Produces: nav route `"settings"`; priority dropdown persists chosen priority; list rows show colored priority chip + amber dot when `task.id in pendingSyncIds`.
 
-- [ ] **Step 1: Failing viewmodel test**
+- [x] **Step 1: Failing viewmodel test**
 
 In `shared-test`/`app/src/test`: `TasksViewModelTest.pendingIds_exposedThroughUiState` — repository fake emits `{taskId}` → uiState contains unsynced id set.
 
-- [ ] **Step 2: Red** — run, expect missing member.
+- [x] **Step 2: Red** — run, expect missing member.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 - `TasksViewModel`: inject repository; combine tasks stream with `repository.getPendingSyncIdsStream()` into ui state (`data class TasksUiState(items, isLoading, pendingSyncIds: Set<String>)` mirroring existing filter handling).
 - Row composable: after completion checkbox render `PriorityChip(priority)` (colors: HIGH `#B3261E`, MEDIUM `#7D5700`, LOW `#38693C` container variants) and if unsynced an 8.dp amber dot (`Color(0xFFFFB300)`).
@@ -1494,12 +1494,12 @@ In `shared-test`/`app/src/test`: `TasksViewModelTest.pendingIds_exposedThroughUi
 - `SettingsScreen`: two `OutlinedTextField`s prefilled from `settings.current()` (collect once in VM init), Save button → `setConfig`, Test button → `OkHttpClient().newCall(Request.Builder().url("$baseUrl/health").build()).executeAsync()` inside viewModelScope showing snackbar result text.
 - Backwards-compat: `StatisticsViewModel` etc. untouched.
 
-- [ ] **Step 4: Green + manual smoke**
+- [x] **Step 4: Green + manual smoke**
 
 Run: `.\gradlew testDebugUnitTest --quiet` → PASS.
 Manual: `.\gradlew installDebug`, open app → settings → enter token → save → create task with High priority → verify appears on `https://prject-cv-production.up.railway.app/docs` data; toggle airplane mode, edit task, restore network → dot clears.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A && git commit -m "feat: priority picker, sync badges, and server settings screen"
@@ -1513,7 +1513,7 @@ git add -A && git commit -m "feat: priority picker, sync badges, and server sett
 **Interfaces:**
 - Produces: green required checks `unit-lint` and `instrumented` on push/PR to `main`.
 
-- [ ] **Step 1: Workflow file**
+- [x] **Step 1: Workflow file**
 
 ```yaml
 name: CI
@@ -1555,12 +1555,12 @@ jobs:
 
 If `spotlessCheck` isn't applied in root build (verify: `grep -rn spotless build.gradle.kts`), drop that task argument rather than adding the plugin.
 
-- [ ] **Step 2: Verify locally what CI runs**
+- [x] **Step 2: Verify locally what CI runs**
 
 Run: `.\gradlew spotlessSpotlessCheck 2>$null; .\gradlew lintDebug testDebugUnitTest --quiet`
 Expected: PASS (spotless variant name resolved per applied plugin; skip if unapplied).
 
-- [ ] **Step 3: Commit + push**
+- [x] **Step 3: Commit + push**
 
 ```bash
 git add .github && git commit -m "ci: unit/lint and emulator jobs"
@@ -1577,23 +1577,23 @@ git push -u origin main
 **Interfaces:**
 - Consumes: shipped app + green CI.
 
-- [ ] **Step 1: Screenshots**
+- [x] **Step 1: Screenshots**
 
 Emulator: capture Tasks list (with chips + dot), Edit screen (priority dropdown), Settings screen → `docs/screenshots/*.png`, committed.
 
-- [ ] **Step 2: README content**
+- [x] **Step 2: README content**
 
 Rewrite with sections: What it is (offline-first Android client for my REST API, built on `android/architecture-samples` — credit + license note), Architecture diagram line (`Compose → ViewModel → Repository → Room+PendingOps → WorkManager → Retrofit → Railway`), Features (offline queue, last-write-wins reconcile, dynamic server settings), How to run (flavors n/a; settings screen setup), Testing (≥5 commands with counts, e.g. `.\gradlew testDebugUnitTest`, specific classes), CI badge, quantified numbers (unit test count, emulator job time).
 
-- [ ] **Step 3: CV-PLAN tracking update**
+- [x] **Step 3: CV-PLAN tracking update**
 
 In workspace `CV-PLAN.md` Tracking table: weeks 6–7 row → `✅ boudy04/taskvault — Kotlin/Compose offline-first client, WorkManager queue, CI (unit+emulator)`; adjust estimate note to ~3–4 weekends.
 
-- [ ] **Step 4: Final verify**
+- [x] **Step 4: Final verify**
 
 Run: `.\gradlew testDebugUnitTest lintDebug --quiet` and confirm GitHub Actions green; pin repo on profile.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A && git commit -m "docs: readme, screenshots, plan tracking"

@@ -42,12 +42,12 @@ The repository exposes `Flow`-based reads straight from Room; writes go to Room 
 ## Testing
 
 ```
-.\gradlew testDebugUnitTest        # 60 unit tests
+.\gradlew testDebugUnitTest        # 145 unit tests across 16 suites
 .\gradlew connectedDebugAndroidTest  # instrumented tests (CI runs them on an emulator)
 .\gradlew lintDebug
 ```
 
-Key suites: `SyncEngineTest` (queue drain + reconcile), `OfflineFirstRepositoryTest` (local-first reads/writes), `DataStoreSettingsRepositoryTest` (settings persistence), `WidgetStateTest` (Glance widget state).
+Key suites: `SyncEngineTest` (queue drain + reconcile), `OfflineFirstRepositoryTest` (local-first reads/writes), `DataStoreSettingsRepositoryTest` (settings persistence), `WidgetStateTest` (Glance widget state), `PendingOpClassifierTest` (mutation-to-op policy), `TaskMappingExtTest` (three-way model mapping).
 
 ## Screenshots
 

@@ -265,7 +265,6 @@ private fun SyncBadge(isUnsynced: Boolean, modifier: Modifier = Modifier) {
             tint = Color(0xFFFFB300),
             modifier = modifier
                 .size(18.dp)
-                .semantics { contentDescription = "Waiting to sync" }
         )
     } else {
         Icon(

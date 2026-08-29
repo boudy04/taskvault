@@ -117,7 +117,7 @@ private fun NoteRow(
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = members.firstOrNull { it.username == note.author }?.username ?: note.author,
+                text = note.author,
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onBackground

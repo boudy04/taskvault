@@ -12,3 +12,4 @@ hs_err_pid*.log
 replay_pid*.log
 .omo/
 # opencode agent session state
+graphify-out/cache/

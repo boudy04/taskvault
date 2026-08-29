@@ -45,6 +45,9 @@ private class FakeApi(
 
     val putIds = mutableListOf<Int>()
     val deletedIds = mutableListOf<Int>()
+    // Refactor-gate canaries (Step 0): record the exact wire bodies sent to the server.
+    val createBodies = mutableListOf<TaskDto>()
+    val updateBodies = mutableListOf<TaskDto>()
 
     override suspend fun listTasks(status: String?): List<TaskDto> {
         listError?.let { throw it }
@@ -58,12 +61,14 @@ private class FakeApi(
     override suspend fun getTask(id: Int): TaskDto = error("not used")
 
     override suspend fun createTask(task: TaskDto): TaskDto {
+        createBodies += task
         createError?.let { throw it }
         return createResult
     }
 
     override suspend fun updateTask(id: Int, task: TaskDto): TaskDto {
         putIds += id
+        updateBodies += task
         updateError?.let { throw it }
         return updateResult
     }
@@ -329,5 +334,51 @@ class SyncEngineTest {
         assertThat(outcome).isEqualTo(SyncOutcome.SUCCESS)
         assertThat(tasks.getById("local-only")?.title).isEqualTo("Mine")
         assertThat(tasks.getByServerId(300)?.title).isEqualTo("Y")
+    }
+
+    // ---------- Refactor gates (Step 0): exact HTTP wire bodies ----------
+
+    @Test
+    fun createOp_wireBody_isFullDto_withoutServerId() = runTest(dispatcher) {
+        tasks.upsert(localTask("w1"))
+        enqueue(PendingOpType.CREATE, payload("w1"))
+
+        val outcome = engine.run()
+
+        assertThat(outcome).isEqualTo(SyncOutcome.SUCCESS)
+        assertThat(api.createBodies.single()).isEqualTo(
+            TaskDto(
+                id = 0,
+                title = "T",
+                description = "D",
+                status = "todo",
+                priority = "high",
+                dueAt = null,
+                tags = emptyList(),
+                assigneeIds = emptyList(),
+            ),
+        )
+    }
+
+    @Test
+    fun updateOp_wireBody_carriesServerIdAsId() = runTest(dispatcher) {
+        tasks.upsert(localTask("w2", serverId = 5))
+        enqueue(PendingOpType.UPDATE, payload("w2", serverId = 5))
+
+        val outcome = engine.run()
+
+        assertThat(outcome).isEqualTo(SyncOutcome.SUCCESS)
+        assertThat(api.updateBodies.single()).isEqualTo(
+            TaskDto(
+                id = 5,
+                title = "T",
+                description = "D",
+                status = "todo",
+                priority = "high",
+                dueAt = null,
+                tags = emptyList(),
+                assigneeIds = emptyList(),
+            ),
+        )
     }
 }

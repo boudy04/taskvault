@@ -156,4 +156,15 @@ class TaskMappingExtTest {
         )
         assertEquals(listOf(4, 5), payload.toDtoWithoutServerId().assigneeIds)
     }
+
+    @Test
+    fun `local in_progress row with isCompleted false reads back as TODO`() {
+        // Pins CURRENT behavior (refactor gate): toExternal() derives status from the
+        // legacy isCompleted flag only, so a stored IN_PROGRESS row surfaces as TODO.
+        val local = LocalTask(
+            id = "1", title = "t", description = "d",
+            isCompleted = false, status = TaskStatus.IN_PROGRESS,
+        )
+        assertEquals(TaskStatus.TODO, local.toExternal().status)
+    }
 }

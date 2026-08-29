@@ -1,11 +1,2 @@
-D:\app\prject cv\p4\app\src\main\res\raw\ofl_outfit_font_license.txt
-D:\app\prject cv\p4\app\src\main\res\drawable\logo_no_fill.png
-D:\app\prject cv\p4\app\src\main\res\mipmap-hdpi\ic_launcher.png
-D:\app\prject cv\p4\app\src\main\res\mipmap-mdpi\ic_launcher.png
-D:\app\prject cv\p4\app\src\main\res\mipmap-xhdpi\ic_launcher.png
-D:\app\prject cv\p4\app\src\main\res\mipmap-xxhdpi\ic_launcher.png
-D:\app\prject cv\p4\app\src\main\res\mipmap-xxxhdpi\ic_launcher.png
-D:\app\prject cv\p4\docs\screenshots\edit_priority.png
-D:\app\prject cv\p4\docs\screenshots\settings.png
-D:\app\prject cv\p4\docs\screenshots\tasks_dark.png
-D:\app\prject cv\p4\docs\screenshots\tasks_light.png
+D:\app\prject cv\p4\docs\refactor-handover.md
+D:\app\prject cv\p4\docs\refactor-issue-log.md

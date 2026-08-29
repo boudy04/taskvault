@@ -89,9 +89,7 @@ class DefaultTaskRepository @Inject constructor(
             isPersonal = isPersonal,
         )
         localDataSource.upsert(task)
-        if (!isPersonal) {
-            enqueue(PendingOpType.CREATE, task)
-        }
+        PendingOpClassifier.forCreate(isPersonal = isPersonal)?.let { enqueue(it, task) }
         scheduleReminder(task.id, task.title, task.dueAt)
         return taskId
     }
@@ -117,9 +115,7 @@ class DefaultTaskRepository @Inject constructor(
         localDataSource.upsert(updated)
         // ponytail: personal rows are Room-only by design; if team edits ever need
         // offline queueing per-field, revisit the payload here
-        if (!updated.isPersonal) {
-            enqueue(PendingOpType.UPDATE, updated)
-        }
+        PendingOpClassifier.forUpdate(isPersonal = updated.isPersonal)?.let { enqueue(it, updated) }
         // dueAt replaces or clears wholesale, so drop any old alarm first
         reminders.cancel(taskId)
         scheduleReminder(taskId, updated.title, updated.dueAt)
@@ -134,14 +130,13 @@ class DefaultTaskRepository @Inject constructor(
         val task = localDataSource.getById(taskId) ?: return
         val updated = task.copy(status = status, isCompleted = status == TaskStatus.DONE)
         localDataSource.upsert(updated)
-        when {
-            // Personal rows stay purely local.
-            updated.isPersonal -> Unit
-            // Members may only send {"status": ...}; the server rejects anything richer.
-            settings.session.first().isMember && updated.serverId != null ->
-                enqueue(PendingOpType.STATUS, updated)
-            else -> enqueue(PendingOpType.UPDATE, updated)
-        }
+        // Personal rows stay purely local; members may only send {"status": ...} for
+        // server-known rows, anything else falls back to a full UPDATE.
+        PendingOpClassifier.forStatusChange(
+            isPersonal = updated.isPersonal,
+            isMember = settings.session.first().isMember,
+            hasServerId = updated.serverId != null,
+        )?.let { enqueue(it, updated) }
         if (status == TaskStatus.DONE) {
             reminders.cancel(taskId)
         } else {
@@ -155,7 +150,10 @@ class DefaultTaskRepository @Inject constructor(
         pendingOps.clearForTask(taskId) // drop stale ops for this row before queueing the tombstone
         localDataSource.deleteById(taskId) // UI reflects deletion instantly
         reminders.cancel(taskId)
-        if (task.serverId != null && !task.isPersonal) enqueue(PendingOpType.DELETE, task)
+        PendingOpClassifier.forDelete(
+            isPersonal = task.isPersonal,
+            hasServerId = task.serverId != null,
+        )?.let { enqueue(it, task) }
     }
 
     override suspend fun addNote(taskId: String, body: String): NoteResult {
